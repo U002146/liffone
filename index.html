@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>一鍵叫車服務</title>
+    <!-- Tailwind CSS for Modern UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- LIFF SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    
+    <!-- Google Fonts: Noto Sans TC -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            overflow: hidden; /* Prevent scroll on mobile */
+            background-color: #f3f4f6;
+        }
+        #map {
+            height: 100vh;
+            width: 100%;
+            z-index: 0;
+        }
+        .center-marker {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -100%); /* Point to center */
+            z-index: 10;
+            pointer-events: none; /* Let clicks pass through to map */
+            transition: transform 0.2s ease;
+        }
+        .center-marker.lifting {
+            transform: translate(-50%, -130%);
+        }
+        .bottom-panel {
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            z-index: 20;
+        }
+        /* Hide scrollbar for payment options */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .payment-btn.active {
+            border-color: #10B981; /* Tailwind emerald-500 */
+            background-color: #ECFDF5; /* Tailwind emerald-50 */
+            color: #059669;
+        }
+    </style>
+</head>
+<body class="relative h-screen w-screen">
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="absolute inset-0 bg-white z-50 flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mb-4"></div>
+        <p class="text-gray-500 font-medium">系統連線中...</p>
+    </div>
+
+    <!-- Map Container -->
+    <div id="map"></div>
+
+    <!-- Center Marker (Visual Pin) -->
+    <div id="center-marker" class="center-marker flex flex-col items-center justify-center">
+        <!-- Changes color based on state (Green: Pickup, Red: Dropoff) -->
+        <i id="marker-icon" class="fa-solid fa-location-dot text-5xl text-emerald-600 drop-shadow-lg"></i>
+        <div class="w-3 h-1 bg-black/20 rounded-full mt-1 blur-[1px]"></div>
+    </div>
+
+    <!-- Step Indicator (Top) -->
+    <div class="absolute top-4 left-4 right-4 z-10">
+        <div class="bg-white/90 backdrop-blur-md rounded-xl shadow-lg p-3 flex items-center justify-between border border-gray-100">
+            <div class="flex items-center space-x-2">
+                <span id="step-badge" class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded">步驟 1/3</span>
+                <span id="step-title" class="font-bold text-gray-800 text-sm">確認上車地點</span>
+            </div>
+            <button onclick="resetApp()" class="text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Floating "My Location" Button -->
+    <button onclick="panToCurrentLocation()" class="absolute bottom-64 right-4 bg-white p-3 rounded-full shadow-lg z-10 text-gray-600 active:bg-gray-100">
+        <i class="fa-solid fa-crosshairs text-xl"></i>
+    </button>
+
+    <!-- Bottom Panel (Address & Actions) -->
+    <div id="bottom-panel" class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl bottom-panel p-6 pb-8">
+        <!-- Handle Bar -->
+        <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
+
+        <!-- Address Display -->
+        <div class="mb-6 text-center">
+            <p id="location-label" class="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">上車地點 (拖曳地圖調整)</p>
+            <h2 id="address-text" class="text-lg font-bold text-gray-800 leading-snug min-h-[3rem] line-clamp-2">
+                定位中...
+            </h2>
+        </div>
+
+        <!-- Action Button (State Dependent) -->
+        <button id="main-action-btn" onclick="handleNextStep()" class="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-[0.98] transition-transform text-lg flex items-center justify-center space-x-2">
+            <span>確認上車地點</span>
+            <i class="fa-solid fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <!-- Final Form Modal (Hidden initially) -->
+    <div id="final-form" class="absolute inset-0 bg-white z-30 transform translate-y-full transition-transform duration-300 flex flex-col">
+        <div class="bg-emerald-600 p-6 pt-12 text-white shadow-md relative">
+            <button onclick="closeFinalForm()" class="absolute top-12 left-6 text-white/80 hover:text-white">
+                <i class="fa-solid fa-chevron-left text-xl"></i>
+            </button>
+            <h2 class="text-2xl font-bold text-center">最後確認</h2>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+            
+            <!-- Summary -->
+            <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-3">
+                <div class="flex items-start space-x-3">
+                    <div class="mt-1 w-2 h-2 rounded-full bg-emerald-500"></div>
+                    <div>
+                        <p class="text-xs text-gray-500">上車</p>
+                        <p id="summary-pickup" class="text-sm font-bold text-gray-800">...</p>
+                    </div>
+                </div>
+                <div class="w-full h-[1px] bg-gray-200 ml-5"></div>
+                <div class="flex items-start space-x-3">
+                    <div class="mt-1 w-2 h-2 rounded-full bg-red-500"></div>
+                    <div>
+                        <p class="text-xs text-gray-500">下車</p>
+                        <p id="summary-dropoff" class="text-sm font-bold text-gray-800">...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phone Input -->
+            <div>
+                <label class="block text-gray-700 font-bold mb-2">📞 聯絡電話</label>
+                <input type="tel" id="user-phone" placeholder="09xx-xxx-xxx" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-lg outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+            </div>
+
+            <!-- Payment Grid -->
+            <div>
+                <label class="block text-gray-700 font-bold mb-3">💰 付款方式</label>
+                <div class="grid grid-cols-2 gap-3" id="payment-options">
+                    <!-- Options injected by JS -->
+                </div>
+            </div>
+            
+            <!-- Date/Time (Hidden Logic: Auto set to Now for One-Click) -->
+            <div class="bg-yellow-50 border border-yellow-100 rounded-lg p-3 flex items-start space-x-3">
+                <i class="fa-solid fa-clock text-yellow-600 mt-1"></i>
+                <div>
+                    <p class="text-sm font-bold text-yellow-800">立即叫車</p>
+                    <p class="text-xs text-yellow-700">司機將盡快前往您指定的地點</p>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="p-6 bg-white border-t border-gray-100">
+             <button onclick="submitOrder()" class="w-full bg-black text-white font-bold py-4 rounded-xl shadow-lg active:scale-[0.98] transition-transform text-lg flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-taxi"></i>
+                <span>立即叫車</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // 1. CONFIGURATION
+        const GOOGLE_MAPS_API_KEY = 'AIzaSyBpoBRRhoixYB01o5HGB_f2AOKlyyxX2T4'; // *** 替換成你的 API KEY ***
+        const DEFAULT_CENTER = { lat: 25.0330, lng: 121.5654 }; // Taipei 101 Default
+        const LIFF_ID = 'YOUR_LIFF_ID_HERE'; // *** 替換成你的 LIFF ID ***
+
+        // Payment Options Data
+        const PAYMENT_METHODS = [
+            { id: 'cash', label: '現金', icon: 'fa-coins', color: 'text-gray-600' },
+            { id: 'senior', label: '敬老卡', icon: 'fa-person-cane', color: 'text-orange-500' },
+            { id: 'disability', label: '愛心卡', icon: 'fa-heart', color: 'text-red-500' },
+            { id: 'coupon', label: '乘車券', icon: 'fa-ticket', color: 'text-blue-500' },
+            { id: 'twrq', label: 'TWRQ', icon: 'fa-qrcode', color: 'text-purple-500' },
+            { id: 'linepay', label: 'LINE Pay', icon: 'fa-brands fa-line', color: 'text-green-500' },
+            { id: 'applepay', label: 'Apple Pay', icon: 'fa-brands fa-apple', color: 'text-black' }
+        ];
+
+        // State
+        let map;
+        let geocoder;
+        let currentStep = 'pickup'; // 'pickup', 'dropoff', 'confirm'
+        let pickupLocation = { lat: null, lng: null, address: '' };
+        let dropoffLocation = { lat: null, lng: null, address: '' };
+        let selectedPayment = 'cash';
+        let isDragging = false;
+
+        // --- Initialization ---
+
+        window.onload = async function() {
+            // Load Payment Options UI
+            renderPaymentOptions();
+            
+            // Init LIFF
+            try {
+                await liff.init({ liffId: LIFF_ID });
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                } else {
+                    // Pre-fill phone if available from previous sessions (optional storage logic)
+                }
+            } catch (err) {
+                console.error('LIFF Init Error:', err);
+                // Proceed anyway for web testing
+            }
+
+            // Load Google Maps Script
+            loadGoogleMapsScript();
+        };
+
+        function loadGoogleMapsScript() {
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&language=zh-TW&callback=initMap`;
+            script.async = true;
+            document.head.appendChild(script);
+        }
+
+        function initMap() {
+            geocoder = new google.maps.Geocoder();
+            
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: DEFAULT_CENTER,
+                zoom: 16,
+                disableDefaultUI: true, // Clean look
+                clickableIcons: false,
+                styles: [ // Optional: Custom "High Quality" Map Style (Desaturated)
+                    {
+                        "featureType": "poi",
+                        "elementType": "labels.icon",
+                        "stylers": [{ "visibility": "off" }]
+                    }
+                ]
+            });
+
+            // Try to get user location
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const pos = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude,
+                        };
+                        map.setCenter(pos);
+                    },
+                    () => { console.log("Geolocation failed"); }
+                );
+            }
+
+            // Map Event Listeners
+            map.addListener('dragstart', () => {
+                isDragging = true;
+                document.getElementById('center-marker').classList.add('lifting');
+                document.getElementById('address-text').innerHTML = '<span class="text-gray-400">定位中...</span>';
+                document.getElementById('main-action-btn').disabled = true;
+                document.getElementById('main-action-btn').classList.add('opacity-50');
+            });
+
+            map.addListener('idle', () => {
+                isDragging = false;
+                document.getElementById('center-marker').classList.remove('lifting');
+                const center = map.getCenter();
+                geocodePosition(center);
+            });
+
+            // Remove Loading Screen
+            setTimeout(() => {
+                document.getElementById('loading').style.opacity = '0';
+                setTimeout(() => document.getElementById('loading').style.display = 'none', 500);
+            }, 1000);
+        }
+
+        // --- Core Logic ---
+
+        function geocodePosition(pos) {
+            geocoder.geocode({ location: pos }, (results, status) => {
+                const btn = document.getElementById('main-action-btn');
+                if (status === "OK" && results[0]) {
+                    // Simplify address (remove "Taiwan" or zip code if needed)
+                    let formattedAddress = results[0].formatted_address.replace(/^(\d+)?台灣/, '');
+                    
+                    document.getElementById('address-text').innerText = formattedAddress;
+                    
+                    if (currentStep === 'pickup') {
+                        pickupLocation = { lat: pos.lat(), lng: pos.lng(), address: formattedAddress };
+                    } else if (currentStep === 'dropoff') {
+                        dropoffLocation = { lat: pos.lat(), lng: pos.lng(), address: formattedAddress };
+                    }
+
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50');
+                } else {
+                    document.getElementById('address-text').innerText = "無法辨識此位置，請移動地圖";
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50');
+                }
+            });
+        }
+
+        function handleNextStep() {
+            if (currentStep === 'pickup') {
+                // Transition to Dropoff
+                currentStep = 'dropoff';
+                
+                // UI Updates
+                updateUIForStep('dropoff');
+                
+                // Optional: Slightly shift map or keep same center to start dropoff selection
+                // Logic: User likely goes somewhere else, but starts from same map view
+            } else if (currentStep === 'dropoff') {
+                // Transition to Final Form
+                openFinalForm();
+            }
+        }
+
+        function updateUIForStep(step) {
+            const markerIcon = document.getElementById('marker-icon');
+            const stepBadge = document.getElementById('step-badge');
+            const stepTitle = document.getElementById('step-title');
+            const locationLabel = document.getElementById('location-label');
+            const mainBtn = document.getElementById('main-action-btn');
+
+            if (step === 'pickup') {
+                markerIcon.className = "fa-solid fa-location-dot text-5xl text-emerald-600 drop-shadow-lg";
+                stepBadge.className = "bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded";
+                stepBadge.innerText = "步驟 1/3";
+                stepTitle.innerText = "確認上車地點";
+                locationLabel.className = "text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1";
+                locationLabel.innerText = "🟢 上車地點";
+                mainBtn.className = "w-full bg-emerald-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-[0.98] transition-transform text-lg flex items-center justify-center space-x-2";
+                mainBtn.innerHTML = '<span>確認上車地點</span><i class="fa-solid fa-arrow-right"></i>';
+            } else if (step === 'dropoff') {
+                markerIcon.className = "fa-solid fa-map-pin text-5xl text-red-600 drop-shadow-lg";
+                stepBadge.className = "bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded";
+                stepBadge.innerText = "步驟 2/3";
+                stepTitle.innerText = "確認下車地點";
+                locationLabel.className = "text-xs font-bold text-red-600 uppercase tracking-wide mb-1";
+                locationLabel.innerText = "🔴 下車地點";
+                mainBtn.className = "w-full bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-[0.98] transition-transform text-lg flex items-center justify-center space-x-2";
+                mainBtn.innerHTML = '<span>確認下車地點</span><i class="fa-solid fa-arrow-right"></i>';
+            }
+        }
+
+        function openFinalForm() {
+            document.getElementById('summary-pickup').innerText = pickupLocation.address;
+            document.getElementById('summary-dropoff').innerText = dropoffLocation.address;
+            document.getElementById('final-form').classList.remove('translate-y-full');
+        }
+
+        function closeFinalForm() {
+            document.getElementById('final-form').classList.add('translate-y-full');
+            // Don't reset everything, just go back to map state
+        }
+
+        function renderPaymentOptions() {
+            const container = document.getElementById('payment-options');
+            container.innerHTML = PAYMENT_METHODS.map(method => `
+                <button onclick="selectPayment('${method.id}')" 
+                    class="payment-btn ${method.id === selectedPayment ? 'active' : ''} border border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center bg-white transition-all hover:bg-gray-50">
+                    <i class="fa-solid ${method.icon} ${method.color} text-xl mb-1"></i>
+                    <span class="text-sm font-medium text-gray-700">${method.label}</span>
+                </button>
+            `).join('');
+        }
+
+        function selectPayment(id) {
+            selectedPayment = id;
+            renderPaymentOptions(); // Re-render to update active class
+        }
+
+        function resetApp() {
+            currentStep = 'pickup';
+            pickupLocation = { lat: null, lng: null, address: '' };
+            dropoffLocation = { lat: null, lng: null, address: '' };
+            updateUIForStep('pickup');
+            closeFinalForm();
+            panToCurrentLocation();
+        }
+
+        function panToCurrentLocation() {
+             if (navigator.geolocation && map) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        map.panTo({
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude,
+                        });
+                    }
+                );
+            }
+        }
+
+        async function submitOrder() {
+            const phone = document.getElementById('user-phone').value;
+            if (!phone) {
+                alert('請輸入聯絡電話'); // In production, use a nicer toast
+                return;
+            }
+
+            const paymentLabel = PAYMENT_METHODS.find(p => p.id === selectedPayment).label;
+            
+            // Generate Message text to send back to chat
+            const messageText = `【一鍵叫車訂單】\n\n` +
+                `📞 電話：${phone}\n` +
+                `🟢 上車：${pickupLocation.address}\n` +
+                `🔴 下車：${dropoffLocation.address}\n` +
+                `💰 付款：${paymentLabel}\n` +
+                `🕒 時間：立即出發\n\n` +
+                `地圖定位連結：https://www.google.com/maps/search/?api=1&query=${pickupLocation.lat},${pickupLocation.lng}`;
+
+            // Send via LIFF
+            if (liff.isInClient()) {
+                try {
+                    await liff.sendMessages([{
+                        type: 'text',
+                        text: messageText
+                    }]);
+                    liff.closeWindow();
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    alert('傳送失敗，請手動截圖給司機');
+                }
+            } else {
+                // Web Fallback (for testing)
+                alert('訂單已生成 (測試模式):\n\n' + messageText);
+            }
+        }
+    </script>
+</body>
+</html>
