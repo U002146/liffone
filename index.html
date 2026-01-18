@@ -62,7 +62,13 @@
     <!-- Loading Overlay -->
     <div id="loading" class="absolute inset-0 bg-white z-50 flex flex-col items-center justify-center transition-opacity duration-500">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mb-4"></div>
-        <p class="text-gray-500 font-medium">系統連線中...</p>
+        <p id="loading-text" class="text-gray-500 font-medium">系統連線中...</p>
+        <!-- Error Message Container (Initially Hidden) -->
+        <div id="error-message" class="hidden mt-4 px-6 text-center">
+            <p class="text-red-500 font-bold mb-2">無法載入地圖</p>
+            <p id="error-detail" class="text-xs text-gray-500 text-left bg-gray-100 p-2 rounded break-all"></p>
+            <button onclick="location.reload()" class="mt-4 text-sm text-emerald-600 underline">重試</button>
+        </div>
     </div>
 
     <!-- Map Container -->
@@ -179,7 +185,9 @@
     <!-- Scripts -->
     <script>
         // 1. CONFIGURATION
-        const GOOGLE_MAPS_API_KEY = 'AIzaSyBpoBRRhoixYB01o5HGB_f2AOKlyyxX2T4'; // *** 替換成你的 API KEY ***
+        // ⚠️ 請務必將下方的 API KEY 替換為您的真實 KEY
+        // ⚠️ 如果看到 "Oops! Something went wrong"，通常是這裡沒填，或是 Google Cloud Console 沒啟用 "Maps JavaScript API"
+        const GOOGLE_MAPS_API_KEY = 'AIzaSyBpoBRRhoixYB01o5HGB_f2AOKlyyxX2T4'; 
         const DEFAULT_CENTER = { lat: 25.0330, lng: 121.5654 }; // Taipei 101 Default
         const LIFF_ID = 'YOUR_LIFF_ID_HERE'; // *** 替換成你的 LIFF ID ***
 
@@ -203,9 +211,31 @@
         let selectedPayment = 'cash';
         let isDragging = false;
 
+        // --- Global Error Handler for Google Maps Auth Failure ---
+        window.gm_authFailure = function() {
+            const errorDiv = document.getElementById('error-message');
+            const detailText = document.getElementById('error-detail');
+            document.getElementById('loading-text').style.display = 'none';
+            document.querySelector('.animate-spin').style.display = 'none';
+            
+            errorDiv.classList.remove('hidden');
+            detailText.innerHTML = `
+                API Key 驗證失敗。<br>
+                1. 請檢查程式碼中的 API KEY 是否填寫。<br>
+                2. 請至 Google Cloud Console 確認是否啟用 "Maps JavaScript API"。<br>
+                3. 請確認 API Key 是否設定了正確的網域限制 (Referrer)。
+            `;
+        };
+
         // --- Initialization ---
 
         window.onload = async function() {
+            // Check if user forgot to replace placeholders
+            if (GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY_HERE' || GOOGLE_MAPS_API_KEY.length < 10) {
+                 showConfigError("請在程式碼中填入正確的 Google Maps API Key");
+                 return;
+            }
+
             // Load Payment Options UI
             renderPaymentOptions();
             
@@ -214,26 +244,39 @@
                 await liff.init({ liffId: LIFF_ID });
                 if (!liff.isLoggedIn()) {
                     liff.login();
-                } else {
-                    // Pre-fill phone if available from previous sessions (optional storage logic)
                 }
             } catch (err) {
                 console.error('LIFF Init Error:', err);
-                // Proceed anyway for web testing
+                // Continue anyway to let the map load
             }
 
             // Load Google Maps Script
             loadGoogleMapsScript();
         };
 
+        function showConfigError(msg) {
+            const errorDiv = document.getElementById('error-message');
+            const detailText = document.getElementById('error-detail');
+            document.getElementById('loading-text').style.display = 'none';
+            document.querySelector('.animate-spin').style.display = 'none';
+            errorDiv.classList.remove('hidden');
+            detailText.innerText = msg;
+        }
+
         function loadGoogleMapsScript() {
             const script = document.createElement('script');
+            // Explicitly set the callback to window.initMap
             script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&language=zh-TW&callback=initMap`;
             script.async = true;
+            script.defer = true;
+            script.onerror = function() {
+                showConfigError("無法連線至 Google Maps 伺服器，請檢查網路或 API Key 設定。");
+            };
             document.head.appendChild(script);
         }
 
-        function initMap() {
+        // Attach initMap to window to ensure it's globally accessible
+        window.initMap = function() {
             geocoder = new google.maps.Geocoder();
             
             map = new google.maps.Map(document.getElementById("map"), {
