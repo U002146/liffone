@@ -5,13 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>地圖定位一鍵叫車</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         /* --- AgeTech 基礎設定 --- */
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #f3f4f6; overflow: hidden; }
-        input, select, textarea { font-size: 17px !important; } /* 防止 iOS 縮放 */
+        input, select, textarea { font-size: 17px !important; }
         .hidden { display: none !important; }
         
         /* --- 地圖層 (Step 1) --- */
@@ -21,14 +20,12 @@
         }
         #map-layer.slide-out { transform: translateY(-100%); }
         
-        /* 地圖中心點 */
         .center-marker {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%);
             z-index: 20; pointer-events: none; transition: all 0.2s ease;
         }
         .center-marker.lifting { transform: translate(-50%, -130%); }
 
-        /* 地圖底部面板 */
         .bottom-panel-map {
             position: absolute; bottom: 0; left: 0; right: 0;
             background: white; border-radius: 24px 24px 0 0;
@@ -48,28 +45,23 @@
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #10B981; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* 彈出視窗列表樣式 */
-        .location-grid { max-height: 50vh; overflow-y: auto; padding: 4px; }
-        
-        /* SweetAlert 自定義 */
+        /* SweetAlert & Grid */
         .swal2-popup { border-radius: 24px !important; font-family: 'Noto Sans TC', sans-serif !important; }
-        .swal2-title { font-size: 1.25rem !important; font-weight: 700 !important; }
+        .location-grid { max-height: 50vh; overflow-y: auto; padding: 4px; }
     </style>
 </head>
 <body>
 
-    <!-- Loading Overlay (5秒強制解除保護) -->
+    <!-- Loading -->
     <div id="loading-overlay" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center transition-opacity duration-500">
         <div class="loader mb-4"></div>
         <p id="loading-text" class="text-gray-500 font-bold text-lg animate-pulse">系統啟動中...</p>
-        <button onclick="forceRemoveLoading()" class="mt-8 text-sm text-gray-300 underline">如果卡住請點此</button>
     </div>
 
-    <!-- ========= STEP 1: 地圖選點 (上車) ========= -->
+    <!-- ========= STEP 1: 地圖選點 ========= -->
     <div id="map-layer">
         <div id="map" class="w-full h-full bg-gray-200"></div>
         
-        <!-- 中心瞄準點 -->
         <div id="center-marker" class="center-marker flex flex-col items-center justify-center">
             <div class="bg-black/80 text-white text-xs font-bold px-3 py-1.5 rounded-full mb-2 shadow-lg backdrop-blur-sm">
                 移動地圖定位
@@ -78,12 +70,10 @@
             <div class="w-4 h-1.5 bg-black/20 rounded-full mt-1 blur-[1.5px]"></div>
         </div>
 
-        <!-- 浮動定位鈕 -->
         <button onclick="panToCurrentLocation()" class="absolute bottom-64 right-4 bg-white p-3.5 rounded-full shadow-lg z-30 text-gray-600 active:bg-gray-100 transition-colors">
             <i class="fa-solid fa-crosshairs text-xl"></i>
         </button>
 
-        <!-- 底部確認板 -->
         <div class="bottom-panel-map">
             <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4"></div>
             <div class="text-center mb-6">
@@ -101,15 +91,15 @@
         </div>
     </div>
 
-
-    <!-- ========= STEP 2: 預約表單 (完工版) ========= -->
+    <!-- ========= STEP 2: 預約表單 (極簡版) ========= -->
     <div id="form-layer">
         <header class="bg-emerald-600 text-white p-6 pb-8 rounded-b-[2.5rem] shadow-lg z-10 relative shrink-0">
             <button onclick="backToMap()" class="absolute top-6 left-4 text-white/90 hover:text-white z-50 flex items-center space-x-1">
                 <i class="fa-solid fa-chevron-left"></i> <span class="text-sm font-bold">重選上車</span>
             </button>
-            <div class="text-center mt-1">
+            <div class="text-center mt-2">
                 <h1 class="text-2xl font-extrabold tracking-wide">地圖定位一鍵叫車</h1>
+                <!-- 移除了載入使用者文字 -->
             </div>
         </header>
 
@@ -122,6 +112,8 @@
                     <input type="tel" id="phone" required placeholder="09xx-xxx-xxx" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
                 </div>
 
+                <!-- 移除了預約時間/VIP 區塊 -->
+
                 <!-- 地點區塊 -->
                 <div class="border-l-4 border-gray-100 pl-4 space-y-5 py-1">
                     
@@ -131,7 +123,7 @@
                         <input type="text" id="pickup" readonly class="w-full text-base font-bold text-gray-500 bg-transparent border-none p-0 outline-none truncate" value="等待定位...">
                     </div>
 
-                    <!-- 下車 (恢復原版常用邏輯) -->
+                    <!-- 下車 (手動輸入 + 常用) -->
                     <div>
                         <div class="flex justify-between items-center mb-2">
                             <label class="block text-sm font-bold text-red-600">🔴 下車地點</label>
@@ -146,7 +138,7 @@
 
                 <div class="w-full h-[1px] bg-gray-100"></div>
 
-                <!-- 付款方式 (改為彈窗選擇) -->
+                <!-- 付款方式 (彈窗) -->
                 <div>
                     <label class="block font-bold text-gray-700 mb-2 text-base">💰 付款方式</label>
                     <div onclick="openPaymentPicker()" class="w-full p-3 border border-gray-200 rounded-xl text-lg font-bold shadow-sm flex items-center justify-between active:bg-gray-50 cursor-pointer">
@@ -161,7 +153,6 @@
             </form>
         </div>
 
-        <!-- 底部確認按鈕 -->
         <div class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 z-30 safe-area-bottom">
             <button id="submitBtn" onclick="submitOrder()" class="w-full bg-black text-white font-bold py-4 rounded-xl shadow-xl active:scale-[0.98] transition-transform text-xl flex items-center justify-center space-x-2">
                 <i class="fa-solid fa-taxi"></i>
@@ -174,18 +165,13 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // ================= 配置區 =================
-        // 1. 主要金鑰 (MAP_KEY)：用於網頁互動地圖
-        // 🔒 安全設定：請在 Google Console 設定 HTTP Referrers 限制 (填入你的 GitHub 網址)
-        // 🛠️ 啟用功能：Maps JavaScript API, Geocoding API
+        // MAP_KEY: 給網頁用 (可設網址限制)
         const MAP_KEY = 'AIzaSyAlTcoOPEZeeMNwTGTap39VPsW85Ux8NHo'; 
+        
+        // STATIC_KEY: 給 LINE 傳圖用 (建議設為「無限制」，但 API 限制只勾選 Maps Static API)
+        const STATIC_KEY = 'YOUR_STATIC_KEY_HERE'; 
 
-        // 2. 靜態金鑰 (STATIC_KEY)：用於 LINE 聊天室傳送地圖圖片
-        // 🔓 安全設定：請設為「無限制 (None)」，但在 API Restrictions 裡只勾選「Maps Static API」
-        // 🛠️ 啟用功能：Maps Static API
-        // (如果你暫時只有一把鑰匙且設為無限制，這裡填一樣的即可)
-        const STATIC_KEY = 'AIzaSyDKmq2TQhIqPo090XCjUq0_oVwlM-kCZtc'; 
-
-        const LIFF_ID = '2008907691-v0O7W8d3'; 
+        const LIFF_ID = 'AIzaSyDKmq2TQhIqPo090XCjUq0_oVwlM-kCZtc'; 
         // =========================================
 
         const PRESET_LOCATIONS = [
@@ -213,41 +199,33 @@
         let cachedPosition = null;
         let mapPickupLocation = { lat: 0, lng: 0 }; 
 
-        // --- 初始化流程 ---
-
         window.onload = function() {
             setTimeout(forceRemoveLoading, 5000);
-
-            // 預先抓取 GPS
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
                         cachedPosition = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                         if (map) map.setCenter(cachedPosition);
                     },
-                    (err) => console.warn("GPS Pending"), { enableHighAccuracy: true, timeout: 5000 }
+                    () => console.warn("GPS Pending"), { enableHighAccuracy: true, timeout: 5000 }
                 );
             }
-
-            // LIFF
             const script = document.createElement('script');
             script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
             script.onload = () => { liff.init({ liffId: LIFF_ID }).catch(e => console.error(e)); };
             document.head.appendChild(script);
 
-            // Google Maps (使用 MAP_KEY)
             if (MAP_KEY.includes('YOUR_')) {
-                alert('請在程式碼中填入 API KEY'); forceRemoveLoading();
+                alert('請填入 API KEY'); forceRemoveLoading();
             } else {
                 const mapScript = document.createElement('script');
-                // 這裡我們用 MAP_KEY (可以有網址限制)
+                // 移除 libraries=places，純淨版地圖
                 mapScript.src = `https://maps.googleapis.com/maps/api/js?key=${MAP_KEY}&language=zh-TW&callback=initMap`;
                 mapScript.async = true; mapScript.defer = true;
                 mapScript.onerror = () => { alert('無法載入地圖 API'); forceRemoveLoading(); };
                 document.head.appendChild(mapScript);
             }
 
-            // 讀取電話
             const savedPhone = localStorage.getItem('taxi_user_phone');
             if(savedPhone) document.getElementById('phone').value = savedPhone;
         };
@@ -259,17 +237,13 @@
         }
 
         // --- 地圖邏輯 ---
-
         window.initMap = function() {
             geocoder = new google.maps.Geocoder();
             const startPos = cachedPosition || { lat: 25.0330, lng: 121.5654 };
-
             map = new google.maps.Map(document.getElementById("map"), {
                 center: startPos, zoom: 17, disableDefaultUI: true, clickableIcons: false
             });
-
-            if (!cachedPosition) panToCurrentLocation();
-            else { geocodePosition(startPos); forceRemoveLoading(); }
+            if (!cachedPosition) panToCurrentLocation(); else { geocodePosition(startPos); forceRemoveLoading(); }
 
             map.addListener('dragstart', () => {
                 document.getElementById('btn-confirm-map').disabled = true;
@@ -321,7 +295,7 @@
                 let bgClass = 'bg-gray-50 hover:bg-red-50';
                 if(loc.value && loc.value.includes('FAV')) bgClass = 'bg-yellow-50 hover:bg-yellow-100 border border-yellow-200';
                 html += `
-                    <button onclick="selectPreset('${loc.value || loc.name}')" 
+                    <button onclick="selectPreset('${loc.value || loc.name}', '${loc.name}')" 
                         class="flex flex-col items-center justify-center p-3 border border-gray-100 rounded-xl transition-all active:scale-95 ${bgClass}">
                         <span class="text-2xl mb-1">${loc.icon}</span>
                         <span class="text-sm font-bold text-gray-700">${loc.name}</span>
@@ -331,23 +305,23 @@
             Swal.fire({ title: '選擇下車地點', html: html, showConfirmButton: false, showCloseButton: true });
         }
 
-        window.selectPreset = function(val) {
+        window.selectPreset = function(val, label) {
             const input = document.getElementById('dropoff');
             if (val.includes('FAV')) {
                 const key = val === 'FAV_ADDR_A' ? 'taxi_fav_a' : 'taxi_fav_b';
-                const label = val === 'FAV_ADDR_A' ? '常用地址 A' : '常用地址 B';
+                const labelName = val === 'FAV_ADDR_A' ? '常用地址 A' : '常用地址 B';
                 const savedAddr = localStorage.getItem(key);
 
                 if (savedAddr) {
                     Swal.fire({
-                        title: `📍 這是您的${label}嗎？`, text: savedAddr, icon: 'question',
+                        title: `📍 這是您的${labelName}嗎？`, text: savedAddr, icon: 'question',
                         showDenyButton: true, confirmButtonText: '是的', denyButtonText: '修改',
                         confirmButtonColor: '#10b981', denyButtonColor: '#ef4444'
                     }).then((result) => {
                         if (result.isConfirmed) { input.value = savedAddr; Swal.close(); flashInput(input); }
-                        else if (result.isDenied) { promptSave(key, label, input); }
+                        else if (result.isDenied) { promptSave(key, labelName, input); }
                     });
-                } else { promptSave(key, label, input); }
+                } else { promptSave(key, labelName, input); }
             } else {
                 input.value = val; Swal.close(); flashInput(input);
             }
@@ -355,7 +329,7 @@
 
         function promptSave(key, label, input) {
             Swal.fire({
-                title: `設定${label}`, input: 'text', inputPlaceholder: '輸入地址...',
+                title: `⭐ 設定${label}`, input: 'text', inputPlaceholder: '輸入地址...',
                 showCancelButton: true, confirmButtonText: '儲存', confirmButtonColor: '#fbbf24'
             }).then((result) => {
                 if (result.isConfirmed && result.value) {
@@ -396,8 +370,7 @@
             Swal.close();
         }
 
-        // --- 送出訂單 (含快照容錯) ---
-
+        // --- 送出訂單 ---
         async function submitOrder() {
             const phone = document.getElementById('phone').value;
             const pickup = document.getElementById('pickup').value;
@@ -415,28 +388,28 @@
 
             const textMsg = `【地圖一鍵叫車】\n📞 電話：${phone}\n🟢 上車：${pickup}\n🔴 下車：${dropoff}\n💰 付款：${payment}\n🕒 時間：立即出發 (VIP)`;
             
-            // 這裡使用 STATIC_KEY 來產生圖片網址
-            // 為了讓 LINE 伺服器能讀取，這把 STATIC_KEY 必須是「無網址限制」的
+            // 使用 STATIC_KEY 產生圖片 (確保金鑰是無網址限制的)
             const safeStaticKey = STATIC_KEY.includes('YOUR_') ? MAP_KEY : STATIC_KEY;
             const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${mapPickupLocation.lat},${mapPickupLocation.lng}&zoom=17&size=600x400&maptype=roadmap&markers=color:red%7Clabel:A%7C${mapPickupLocation.lat},${mapPickupLocation.lng}&key=${safeStaticKey}`;
 
             try {
                 if (liff.isInClient()) {
                     try {
-                        // 優先嘗試：傳送 圖片 + 文字
+                        // 嘗試傳送圖片 + 文字
                         await liff.sendMessages([
                             { type: 'text', text: textMsg },
                             { type: 'image', originalContentUrl: staticMapUrl, previewImageUrl: staticMapUrl }
                         ]);
+                        liff.closeWindow();
                     } catch (imageError) {
-                        console.warn("圖片傳送失敗，可能是金鑰限制問題，改為純文字:", imageError);
-                        // 降級方案：如果圖片失敗（403 Forbidden），自動改為只傳文字
+                        console.warn("圖片傳送失敗，降級為純文字", imageError);
+                        // 失敗則只傳文字
                         await liff.sendMessages([{ type: 'text', text: textMsg }]);
+                        liff.closeWindow();
                     }
-                    liff.closeWindow();
                 } else {
-                    alert("【測試訂單】\n" + textMsg + "\n\n(LINE環境下將傳送地圖圖片)");
-                    console.log("Static Map URL:", staticMapUrl);
+                    alert("【測試訂單】\n" + textMsg + "\n\n(地圖圖片預覽將在下方開啟)");
+                    window.open(staticMapUrl, '_blank');
                     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-taxi mr-2"></i>確認叫車';
                 }
             } catch (e) {
