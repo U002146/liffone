@@ -56,6 +56,7 @@
     <div id="loading-overlay" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center transition-opacity duration-500">
         <div class="loader mb-4"></div>
         <p id="loading-text" class="text-gray-500 font-bold text-lg animate-pulse">系統啟動中...</p>
+        <button onclick="forceRemoveLoading()" class="mt-8 text-sm text-gray-300 underline">如果卡住請點此</button>
     </div>
 
     <!-- ========= STEP 1: 地圖選點 ========= -->
@@ -99,7 +100,6 @@
             </button>
             <div class="text-center mt-2">
                 <h1 class="text-2xl font-extrabold tracking-wide">地圖定位一鍵叫車</h1>
-                <!-- 移除了載入使用者文字 -->
             </div>
         </header>
 
@@ -111,8 +111,6 @@
                     <label class="block font-bold text-gray-700 mb-2 text-base">📞 聯絡電話</label>
                     <input type="tel" id="phone" required placeholder="09xx-xxx-xxx" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
                 </div>
-
-                <!-- 移除了預約時間/VIP 區塊 -->
 
                 <!-- 地點區塊 -->
                 <div class="border-l-4 border-gray-100 pl-4 space-y-5 py-1">
@@ -165,13 +163,10 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // ================= 配置區 =================
-        // MAP_KEY: 給網頁用 (可設網址限制)
-        const MAP_KEY = 'AIzaSyAlTcoOPEZeeMNwTGTap39VPsW85Ux8NHo'; 
+        // 請填入您的 Google Maps API Key (只需要這一把！)
+        const API_KEY = 'AIzaSyAlTcoOPEZeeMNwTGTap39VPsW85Ux8NHo'; 
         
-        // STATIC_KEY: 給 LINE 傳圖用 (建議設為「無限制」，但 API 限制只勾選 Maps Static API)
-        const STATIC_KEY = 'YOUR_STATIC_KEY_HERE'; 
-
-        const LIFF_ID = 'AIzaSyDKmq2TQhIqPo090XCjUq0_oVwlM-kCZtc'; 
+        const LIFF_ID = '2008907691-v0O7W8d3'; 
         // =========================================
 
         const PRESET_LOCATIONS = [
@@ -197,7 +192,6 @@
 
         let map, geocoder;
         let cachedPosition = null;
-        let mapPickupLocation = { lat: 0, lng: 0 }; 
 
         window.onload = function() {
             setTimeout(forceRemoveLoading, 5000);
@@ -215,12 +209,12 @@
             script.onload = () => { liff.init({ liffId: LIFF_ID }).catch(e => console.error(e)); };
             document.head.appendChild(script);
 
-            if (MAP_KEY.includes('YOUR_')) {
+            if (API_KEY.includes('YOUR_')) {
                 alert('請填入 API KEY'); forceRemoveLoading();
             } else {
                 const mapScript = document.createElement('script');
-                // 移除 libraries=places，純淨版地圖
-                mapScript.src = `https://maps.googleapis.com/maps/api/js?key=${MAP_KEY}&language=zh-TW&callback=initMap`;
+                // 移除 libraries=places，回歸最單純的載入
+                mapScript.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&language=zh-TW&callback=initMap`;
                 mapScript.async = true; mapScript.defer = true;
                 mapScript.onerror = () => { alert('無法載入地圖 API'); forceRemoveLoading(); };
                 document.head.appendChild(mapScript);
@@ -251,9 +245,7 @@
                 document.getElementById('map-address-text').innerHTML = '<span class="text-gray-400">定位中...</span>';
             });
             map.addListener('idle', () => {
-                const center = map.getCenter();
-                mapPickupLocation = { lat: center.lat(), lng: center.lng() }; 
-                geocodePosition(mapPickupLocation);
+                geocodePosition(map.getCenter());
             });
         };
 
@@ -370,7 +362,7 @@
             Swal.close();
         }
 
-        // --- 送出訂單 ---
+        // --- 送出訂單 (純文字版) ---
         async function submitOrder() {
             const phone = document.getElementById('phone').value;
             const pickup = document.getElementById('pickup').value;
@@ -386,30 +378,22 @@
             btn.disabled = true;
             btn.innerHTML = '<div class="loader mr-2 w-5 h-5 border-2"></div> 處理中...';
 
-            const textMsg = `【地圖一鍵叫車】\n📞 電話：${phone}\n🟢 上車：${pickup}\n🔴 下車：${dropoff}\n💰 付款：${payment}\n🕒 時間：立即出發 (VIP)`;
-            
-            // 使用 STATIC_KEY 產生圖片 (確保金鑰是無網址限制的)
-            const safeStaticKey = STATIC_KEY.includes('YOUR_') ? MAP_KEY : STATIC_KEY;
-            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${mapPickupLocation.lat},${mapPickupLocation.lng}&zoom=17&size=600x400&maptype=roadmap&markers=color:red%7Clabel:A%7C${mapPickupLocation.lat},${mapPickupLocation.lng}&key=${safeStaticKey}`;
+            // 🌟 最終極簡版文字訊息
+            const textMsg = `【地圖定位一鍵叫車】\n` +
+                            `-------------------\n` +
+                            `📞 電話：${phone}\n` +
+                            `🟢 上車：${pickup}\n` +
+                            `🔴 下車：${dropoff}\n` +
+                            `💰 付款：${payment}\n` +
+                            `🕒 時間：立即出發 (VIP)`;
 
             try {
                 if (liff.isInClient()) {
-                    try {
-                        // 嘗試傳送圖片 + 文字
-                        await liff.sendMessages([
-                            { type: 'text', text: textMsg },
-                            { type: 'image', originalContentUrl: staticMapUrl, previewImageUrl: staticMapUrl }
-                        ]);
-                        liff.closeWindow();
-                    } catch (imageError) {
-                        console.warn("圖片傳送失敗，降級為純文字", imageError);
-                        // 失敗則只傳文字
-                        await liff.sendMessages([{ type: 'text', text: textMsg }]);
-                        liff.closeWindow();
-                    }
+                    // 只傳送純文字，100% 成功率，不含任何連結
+                    await liff.sendMessages([{ type: 'text', text: textMsg }]);
+                    liff.closeWindow();
                 } else {
-                    alert("【測試訂單】\n" + textMsg + "\n\n(地圖圖片預覽將在下方開啟)");
-                    window.open(staticMapUrl, '_blank');
+                    alert("【測試訂單】\n" + textMsg);
                     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-taxi mr-2"></i>確認叫車';
                 }
             } catch (e) {
