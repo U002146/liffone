@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>地圖定位一鍵叫車</title>
+    <title>地圖定位即時叫車</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -52,7 +52,8 @@
         .location-grid { max-height: 50vh; overflow-y: auto; padding: 4px; }
         
         /* SweetAlert 自定義 */
-        .swal2-popup { border-radius: 24px !important; }
+        .swal2-popup { border-radius: 24px !important; font-family: 'Noto Sans TC', sans-serif !important; }
+        .swal2-title { font-size: 1.25rem !important; font-weight: 700 !important; }
     </style>
 </head>
 <body>
@@ -108,7 +109,7 @@
                 <i class="fa-solid fa-chevron-left"></i> <span class="text-sm font-bold">重選上車</span>
             </button>
             <div class="text-center mt-1">
-                <h1 class="text-2xl font-extrabold tracking-wide">地圖定位一鍵叫車</h1>
+                <h1 class="text-2xl font-extrabold tracking-wide">地圖定位即時叫車</h1>
             </div>
         </header>
 
@@ -130,7 +131,7 @@
                         <input type="text" id="pickup" readonly class="w-full text-base font-bold text-gray-500 bg-transparent border-none p-0 outline-none truncate" value="等待定位...">
                     </div>
 
-                    <!-- 下車 (移除 Google Autocomplete，僅保留手動 + 常用) -->
+                    <!-- 下車 (恢復原版常用邏輯) -->
                     <div>
                         <div class="flex justify-between items-center mb-2">
                             <label class="block text-sm font-bold text-red-600">🔴 下車地點</label>
@@ -201,7 +202,7 @@
 
         let map, geocoder;
         let cachedPosition = null;
-        let mapPickupLocation = { lat: 0, lng: 0 }; // 儲存座標供截圖使用
+        let mapPickupLocation = { lat: 0, lng: 0 }; 
 
         // --- 初始化流程 ---
 
@@ -234,7 +235,7 @@
                 forceRemoveLoading();
             } else {
                 const mapScript = document.createElement('script');
-                // 注意：這裡移除了 libraries=places，因為您說不需要預測功能了，節省效能
+                // 移除 libraries=places，純淨版地圖
                 mapScript.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&language=zh-TW&callback=initMap`;
                 mapScript.async = true; mapScript.defer = true;
                 mapScript.onerror = () => { alert('無法載入地圖 API'); forceRemoveLoading(); };
@@ -279,7 +280,7 @@
             
             map.addListener('idle', () => {
                 const center = map.getCenter();
-                mapPickupLocation = { lat: center.lat(), lng: center.lng() }; // 更新全域座標
+                mapPickupLocation = { lat: center.lat(), lng: center.lng() }; 
                 geocodePosition(mapPickupLocation);
             });
         };
@@ -317,7 +318,7 @@
             document.getElementById('form-layer').classList.remove('active');
         }
 
-        // --- 下車地點 (彈出視窗) ---
+        // --- 下車地點 (常用地址邏輯 - 完美移植版) ---
 
         function openPresetLocations() {
             let html = '<div class="grid grid-cols-2 gap-3 mt-2 location-grid">';
@@ -326,7 +327,7 @@
                 if(loc.value && loc.value.includes('FAV')) bgClass = 'bg-yellow-50 hover:bg-yellow-100 border border-yellow-200';
                 
                 html += `
-                    <button onclick="selectPreset('${loc.value || loc.name}')" 
+                    <button onclick="selectPreset('${loc.value || loc.name}', '${loc.name}')" 
                         class="flex flex-col items-center justify-center p-3 border border-gray-100 rounded-xl transition-all active:scale-95 ${bgClass}">
                         <span class="text-2xl mb-1">${loc.icon}</span>
                         <span class="text-sm font-bold text-gray-700">${loc.name}</span>
@@ -339,25 +340,80 @@
             });
         }
 
-        window.selectPreset = function(val) {
+        // 修改後的 selectPreset：繼承圖1的完整邏輯
+        window.selectPreset = function(val, labelName) {
             const input = document.getElementById('dropoff');
+            
+            // 邏輯重點：如果是常用地址 A 或 B
             if (val.includes('FAV')) {
                 const key = val === 'FAV_ADDR_A' ? 'taxi_fav_a' : 'taxi_fav_b';
                 const label = val === 'FAV_ADDR_A' ? '常用地址 A' : '常用地址 B';
-                const saved = localStorage.getItem(key);
-                if (saved) {
-                    input.value = saved; Swal.close();
-                } else {
+                const savedAddr = localStorage.getItem(key);
+
+                if (savedAddr) {
+                    // 如果有存過，詢問是否為該地址
                     Swal.fire({
-                        title: `設定${label}`, input: 'text', showCancelButton: true, confirmButtonText: '儲存', confirmButtonColor: '#fbbf24'
-                    }).then(r => {
-                        if(r.isConfirmed && r.value) { localStorage.setItem(key, r.value); input.value = r.value; Swal.close(); }
+                        title: `📍 這是您的${label}嗎？`,
+                        text: savedAddr,
+                        icon: 'question',
+                        showDenyButton: true,
+                        confirmButtonText: '是的，填入',
+                        denyButtonText: '不，我要修改',
+                        confirmButtonColor: '#10b981',
+                        denyButtonColor: '#ef4444',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            input.value = savedAddr;
+                            flashInput(input);
+                        } else if (result.isDenied) {
+                            // 使用者想修改
+                            promptSave(key, label, input);
+                        }
                     });
+                } else {
+                    // 沒存過，直接跳設定窗
+                    promptSave(key, label, input);
                 }
             } else {
-                input.value = val; Swal.close();
+                // 普通地點，直接填入
+                input.value = val;
+                Swal.close();
+                flashInput(input);
             }
         };
+
+        // 修改/設定常用地址的彈窗
+        function promptSave(key, label, input) {
+            Swal.fire({
+                title: `⭐ 設定${label}`,
+                input: 'text',
+                inputPlaceholder: '輸入地址 (例如：花蓮市中正路100號)',
+                showCancelButton: true,
+                confirmButtonText: '儲存並填入',
+                cancelButtonText: '取消',
+                confirmButtonColor: '#fbbf24'
+            }).then((result) => {
+                if (result.isConfirmed && result.value) {
+                    localStorage.setItem(key, result.value);
+                    input.value = result.value;
+                    Swal.fire({
+                        icon: 'success',
+                        title: '已記憶！',
+                        text: `下次點「${label}」就會自動帶入囉`,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    flashInput(input);
+                }
+            });
+        }
+
+        // 視覺回饋效果
+        function flashInput(input) {
+            input.classList.add('bg-blue-50', 'border-blue-300');
+            setTimeout(() => input.classList.remove('bg-blue-50', 'border-blue-300'), 500);
+        }
 
         // --- 付款方式 (彈出視窗) ---
 
@@ -406,15 +462,16 @@
             btn.innerHTML = '<div class="loader mr-2 w-5 h-5 border-2"></div> 處理中...';
 
             // 1. 文字訊息
-            const textMsg = `【地圖一鍵叫車】\n📞 電話：${phone}\n🟢 上車：${pickup}\n🔴 下車：${dropoff}\n💰 付款：${payment}\n🕒 時間：立即出發 (VIP)`;
+            const textMsg = `【地圖定位即時叫車】\n📞 電話：${phone}\n🟢 上車：${pickup}\n🔴 下車：${dropoff}\n💰 付款：${payment}\n🕒 時間：立即出發 (VIP)`;
             
-            // 2. 靜態地圖網址 (需要啟用 Maps Static API)
-            // 格式: center=lat,lng & zoom=17 & size=400x400 & markers=...
+            // 2. 靜態地圖網址
             const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${mapPickupLocation.lat},${mapPickupLocation.lng}&zoom=17&size=600x400&maptype=roadmap&markers=color:red%7Clabel:A%7C${mapPickupLocation.lat},${mapPickupLocation.lng}&key=${GOOGLE_MAPS_API_KEY}`;
+
+            // console.log 檢查連結是否正確 (除錯用)
+            console.log("Static Map Generated:", staticMapUrl);
 
             try {
                 if (liff.isInClient()) {
-                    // 傳送 文字 + 圖片
                     await liff.sendMessages([
                         { type: 'text', text: textMsg },
                         { 
