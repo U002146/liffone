@@ -131,7 +131,8 @@
                     <i class="fa-solid fa-location-dot input-icon text-rose-500"></i>
                     <div class="flex-1">
                         <label class="block text-[10px] text-slate-400 font-bold uppercase">Drop-off (To)</label>
-                        <input type="text" id="dropoff" placeholder="輸入目的地..." class="w-full bg-transparent font-bold text-slate-800 outline-none text-lg">
+                        <!-- 修正：加入 autocomplete="off" 避免瀏覽器亂跳電話建議 -->
+                        <input type="text" id="dropoff" name="search_dest" autocomplete="off" placeholder="輸入目的地..." class="w-full bg-transparent font-bold text-slate-800 outline-none text-lg">
                     </div>
                     <button onclick="openPresetLocations()" class="ml-2 bg-slate-100 text-slate-500 p-2 rounded-lg active:bg-slate-200"><i class="fa-solid fa-star text-sm"></i></button>
                 </div>
@@ -342,14 +343,17 @@
             btn.innerHTML = '<div class="loader mr-3 w-5 h-5 border-2 border-white border-t-transparent"></div> 處理中...';
 
             const googleMapUrl = `https://www.google.com/maps/search/?api=1&query=${currentCenter.lat},${currentCenter.lng}`;
+            
+            // 🔥 新增：下車地點導航連結
+            // 使用 encodeURIComponent 確保中文地點能被 Google 正確解析
+            const dropoffMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dropoff)}`;
 
-            // Flex Message JSON (V6.1 最終極黑白版)
+            // Flex Message JSON (V7.0 全能導航版)
             const flexMsg = {
                 type: "flex",
                 altText: "🚕 即時叫車訂單",
                 contents: {
                     type: "bubble",
-                    // 標題區：白底黑字
                     header: {
                         type: "box", layout: "vertical",
                         contents: [
@@ -357,7 +361,6 @@
                         ],
                         backgroundColor: "#FFFFFF", paddingAll: "20px"
                     },
-                    // 內容區：白底黑/灰字，移除所有品牌色
                     body: {
                         type: "box", layout: "vertical",
                         contents: [
@@ -373,12 +376,17 @@
                                 ]
                             },
                             { type: "separator", margin: "lg" },
-                            // 下車
+                            // 下車 (🚀 新增導航功能)
                             {
                                 type: "box", layout: "horizontal", margin: "lg",
                                 contents: [
                                     { type: "text", text: "🔴 下車", flex: 2, color: "#888888", size: "sm" },
-                                    { type: "text", text: dropoff, flex: 5, color: "#111111", size: "sm", wrap: true }
+                                    { 
+                                        type: "text", text: dropoff, flex: 5, color: "#111111", size: "sm", wrap: true,
+                                        // 讓這行文字變成藍色底線，提示可點擊
+                                        color: "#2563EB", decoration: "underline",
+                                        action: { type: "uri", label: "導航", uri: dropoffMapUrl }
+                                    }
                                 ]
                             },
                             { type: "separator", margin: "lg" },
