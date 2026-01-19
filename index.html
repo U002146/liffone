@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>地圖定位一鍵叫車</title>
+    <!-- 修改點 1: 網頁標題改為「地圖定位即時叫車」 -->
+    <title>地圖定位即時叫車</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -59,7 +60,7 @@
         <button onclick="forceRemoveLoading()" class="mt-8 text-sm text-gray-300 underline">如果卡住請點此</button>
     </div>
 
-    <!-- ========= STEP 1: 地圖選點 ========= -->
+    <!-- ========= STEP 1: 地圖選點 (標題：地圖定位即時叫車) ========= -->
     <div id="map-layer">
         <div id="map" class="w-full h-full bg-gray-200"></div>
         
@@ -92,14 +93,15 @@
         </div>
     </div>
 
-    <!-- ========= STEP 2: 預約表單 (極簡版) ========= -->
+    <!-- ========= STEP 2: 預約表單 (標題：即時叫車) ========= -->
     <div id="form-layer">
         <header class="bg-emerald-600 text-white p-6 pb-8 rounded-b-[2.5rem] shadow-lg z-10 relative shrink-0">
             <button onclick="backToMap()" class="absolute top-6 left-4 text-white/90 hover:text-white z-50 flex items-center space-x-1">
                 <i class="fa-solid fa-chevron-left"></i> <span class="text-sm font-bold">重選上車</span>
             </button>
             <div class="text-center mt-2">
-                <h1 class="text-2xl font-extrabold tracking-wide">地圖定位一鍵叫車</h1>
+                <!-- 修改點 2: 第二頁標題改為「即時叫車」 -->
+                <h1 class="text-2xl font-extrabold tracking-wide">即時叫車</h1>
             </div>
         </header>
 
@@ -163,9 +165,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // ================= 配置區 =================
-        // 請填入您的 Google Maps API Key (只需要這一把！)
         const API_KEY = 'AIzaSyAlTcoOPEZeeMNwTGTap39VPsW85Ux8NHo'; 
-        
         const LIFF_ID = '2008907691-v0O7W8d3'; 
         // =========================================
 
@@ -378,8 +378,8 @@
             btn.disabled = true;
             btn.innerHTML = '<div class="loader mr-2 w-5 h-5 border-2"></div> 處理中...';
 
-            // 🌟 最終極簡版文字訊息
-            const textMsg = `【地圖定位一鍵叫車】\n` +
+            // 修改點 3: 訂單標題也改為「【即時叫車】」
+            const textMsg = `【即時叫車】\n` +
                             `-------------------\n` +
                             `📞 電話：${phone}\n` +
                             `🟢 上車：${pickup}\n` +
