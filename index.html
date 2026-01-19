@@ -131,8 +131,8 @@
                     <i class="fa-solid fa-location-dot input-icon text-rose-500"></i>
                     <div class="flex-1">
                         <label class="block text-[10px] text-slate-400 font-bold uppercase">Drop-off (To)</label>
-                        <!-- 修正：加入 autocomplete="off" 避免瀏覽器亂跳電話建議 -->
-                        <input type="text" id="dropoff" name="search_dest" autocomplete="off" placeholder="輸入目的地..." class="w-full bg-transparent font-bold text-slate-800 outline-none text-lg">
+                        <!-- 修正：強力阻擋自動填寫 (亂數 name + autocomplete off) -->
+                        <input type="text" id="dropoff" name="no_autofill_dest_8823" autocomplete="off" placeholder="輸入目的地..." class="w-full bg-transparent font-bold text-slate-800 outline-none text-lg">
                     </div>
                     <button onclick="openPresetLocations()" class="ml-2 bg-slate-100 text-slate-500 p-2 rounded-lg active:bg-slate-200"><i class="fa-solid fa-star text-sm"></i></button>
                 </div>
@@ -343,60 +343,59 @@
             btn.innerHTML = '<div class="loader mr-3 w-5 h-5 border-2 border-white border-t-transparent"></div> 處理中...';
 
             const googleMapUrl = `https://www.google.com/maps/search/?api=1&query=${currentCenter.lat},${currentCenter.lng}`;
-            
-            // 🔥 新增：下車地點導航連結
-            // 使用 encodeURIComponent 確保中文地點能被 Google 正確解析
             const dropoffMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dropoff)}`;
 
-            // Flex Message JSON (V7.0 全能導航版)
+            // V8.0 黑魂隱藏版 Flex Message
             const flexMsg = {
                 type: "flex",
                 altText: "🚕 即時叫車訂單",
                 contents: {
                     type: "bubble",
+                    styles: {
+                        header: { backgroundColor: "#000000" },
+                        body: { backgroundColor: "#000000" }
+                    },
                     header: {
                         type: "box", layout: "vertical",
                         contents: [
-                            { type: "text", text: `${payment}`, weight: "bold", size: "xxl", color: "#000000", align: "center" }
+                            { type: "text", text: `${payment}`, weight: "bold", size: "3xl", color: "#FFFFFF", align: "center" }
                         ],
-                        backgroundColor: "#FFFFFF", paddingAll: "20px"
+                        paddingAll: "20px"
                     },
                     body: {
                         type: "box", layout: "vertical",
                         contents: [
-                            // 上車
+                            // 上車 (隱藏導航)
                             {
                                 type: "box", layout: "horizontal", margin: "md",
                                 contents: [
-                                    { type: "text", text: "🟢 上車", flex: 2, color: "#888888", size: "sm" },
+                                    { type: "text", text: "🟢 上車", flex: 2, color: "#AAAAAA", size: "sm" },
                                     { 
-                                        type: "text", text: pickup, flex: 5, color: "#111111", size: "sm", wrap: true, 
+                                        type: "text", text: pickup, flex: 5, color: "#FFFFFF", size: "sm", wrap: true, 
                                         action: { type: "uri", label: "導航", uri: googleMapUrl } 
                                     }
                                 ]
                             },
-                            { type: "separator", margin: "lg" },
-                            // 下車 (🚀 新增導航功能)
+                            { type: "separator", margin: "lg", color: "#333333" },
+                            // 下車 (隱藏導航)
                             {
                                 type: "box", layout: "horizontal", margin: "lg",
                                 contents: [
-                                    { type: "text", text: "🔴 下車", flex: 2, color: "#888888", size: "sm" },
+                                    { type: "text", text: "🔴 下車", flex: 2, color: "#AAAAAA", size: "sm" },
                                     { 
-                                        type: "text", text: dropoff, flex: 5, color: "#111111", size: "sm", wrap: true,
-                                        // 讓這行文字變成藍色底線，提示可點擊
-                                        color: "#2563EB", decoration: "underline",
+                                        type: "text", text: dropoff, flex: 5, color: "#FFFFFF", size: "sm", wrap: true,
                                         action: { type: "uri", label: "導航", uri: dropoffMapUrl }
                                     }
                                 ]
                             },
-                            { type: "separator", margin: "lg" },
-                            // 電話
+                            { type: "separator", margin: "lg", color: "#333333" },
+                            // 電話 (隱藏撥號)
                             {
                                 type: "box", layout: "horizontal", margin: "lg",
                                 contents: [
-                                    { type: "text", text: "📞 電話", flex: 2, color: "#888888", size: "sm" },
+                                    { type: "text", text: "📞 電話", flex: 2, color: "#AAAAAA", size: "sm" },
                                     { 
-                                        type: "text", text: phone, flex: 5, color: "#111111", size: "sm", weight: "bold", 
+                                        type: "text", text: phone, flex: 5, color: "#FFFFFF", size: "sm", weight: "bold", 
                                         action: { type: "uri", label: "撥號", uri: `tel:${phone}` } 
                                     }
                                 ]
@@ -412,7 +411,7 @@
                     liff.closeWindow();
                 } else {
                     console.log(flexMsg);
-                    alert("【訂單模擬成功】\n(Flex Message 已生成)");
+                    alert("【訂單模擬成功】\n(黑魂版 Flex Message 已生成)");
                     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-taxi mr-2"></i>確認叫車';
                 }
             } catch (e) {
