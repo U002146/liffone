@@ -345,57 +345,57 @@
             const googleMapUrl = `https://www.google.com/maps/search/?api=1&query=${currentCenter.lat},${currentCenter.lng}`;
             const dropoffMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dropoff)}`;
 
-            // V8.0 黑魂隱藏版 Flex Message
+            // V9.0 白底黑字隱藏版 Flex Message (White Stealth Edition)
             const flexMsg = {
                 type: "flex",
                 altText: "🚕 即時叫車訂單",
                 contents: {
                     type: "bubble",
                     styles: {
-                        header: { backgroundColor: "#000000" },
-                        body: { backgroundColor: "#000000" }
+                        header: { backgroundColor: "#FFFFFF" }, // 白底
+                        body: { backgroundColor: "#FFFFFF" }   // 白底
                     },
                     header: {
                         type: "box", layout: "vertical",
                         contents: [
-                            { type: "text", text: `${payment}`, weight: "bold", size: "3xl", color: "#FFFFFF", align: "center" }
+                            { type: "text", text: `${payment}`, weight: "bold", size: "3xl", color: "#000000", align: "center" } // 黑字
                         ],
                         paddingAll: "20px"
                     },
                     body: {
                         type: "box", layout: "vertical",
                         contents: [
-                            // 上車 (隱藏導航)
+                            // 上車 (隱藏導航 - 黑字)
                             {
                                 type: "box", layout: "horizontal", margin: "md",
                                 contents: [
-                                    { type: "text", text: "🟢 上車", flex: 2, color: "#AAAAAA", size: "sm" },
+                                    { type: "text", text: "🟢 上車", flex: 2, color: "#888888", size: "sm" },
                                     { 
-                                        type: "text", text: pickup, flex: 5, color: "#FFFFFF", size: "sm", wrap: true, 
+                                        type: "text", text: pickup, flex: 5, color: "#111111", size: "sm", wrap: true, 
                                         action: { type: "uri", label: "導航", uri: googleMapUrl } 
                                     }
                                 ]
                             },
-                            { type: "separator", margin: "lg", color: "#333333" },
-                            // 下車 (隱藏導航)
+                            { type: "separator", margin: "lg", color: "#EEEEEE" }, // 淺灰分隔線
+                            // 下車 (隱藏導航 - 黑字)
                             {
                                 type: "box", layout: "horizontal", margin: "lg",
                                 contents: [
-                                    { type: "text", text: "🔴 下車", flex: 2, color: "#AAAAAA", size: "sm" },
+                                    { type: "text", text: "🔴 下車", flex: 2, color: "#888888", size: "sm" },
                                     { 
-                                        type: "text", text: dropoff, flex: 5, color: "#FFFFFF", size: "sm", wrap: true,
+                                        type: "text", text: dropoff, flex: 5, color: "#111111", size: "sm", wrap: true,
                                         action: { type: "uri", label: "導航", uri: dropoffMapUrl }
                                     }
                                 ]
                             },
-                            { type: "separator", margin: "lg", color: "#333333" },
-                            // 電話 (隱藏撥號)
+                            { type: "separator", margin: "lg", color: "#EEEEEE" },
+                            // 電話 (隱藏撥號 - 黑字)
                             {
                                 type: "box", layout: "horizontal", margin: "lg",
                                 contents: [
-                                    { type: "text", text: "📞 電話", flex: 2, color: "#AAAAAA", size: "sm" },
+                                    { type: "text", text: "📞 電話", flex: 2, color: "#888888", size: "sm" },
                                     { 
-                                        type: "text", text: phone, flex: 5, color: "#FFFFFF", size: "sm", weight: "bold", 
+                                        type: "text", text: phone, flex: 5, color: "#111111", size: "sm", weight: "bold", 
                                         action: { type: "uri", label: "撥號", uri: `tel:${phone}` } 
                                     }
                                 ]
@@ -411,7 +411,7 @@
                     liff.closeWindow();
                 } else {
                     console.log(flexMsg);
-                    alert("【訂單模擬成功】\n(黑魂版 Flex Message 已生成)");
+                    alert("【訂單模擬成功】\n(白底黑字 Flex Message 已生成)");
                     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-taxi mr-2"></i>確認叫車';
                 }
             } catch (e) {
