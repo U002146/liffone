@@ -58,7 +58,7 @@
 </head>
 <body>
 
-    <!-- Loading Overlay -->
+    <!-- Loading Overlay (5秒強制解除保護) -->
     <div id="loading-overlay" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center transition-opacity duration-500">
         <div class="loader mb-4"></div>
         <p id="loading-text" class="text-gray-500 font-bold text-lg animate-pulse">系統啟動中...</p>
@@ -174,11 +174,15 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // ================= 配置區 =================
-        // 1. 主要金鑰：用於網頁地圖 (需設定網址限制，例如 *.github.io)
+        // 1. 主要金鑰 (MAP_KEY)：用於網頁互動地圖
+        // 🔒 安全設定：請在 Google Console 設定 HTTP Referrers 限制 (填入你的 GitHub 網址)
+        // 🛠️ 啟用功能：Maps JavaScript API, Geocoding API
         const MAP_KEY = 'AIzaSyAlTcoOPEZeeMNwTGTap39VPsW85Ux8NHo'; 
 
-        // 2. 靜態圖片金鑰：用於 LINE 聊天室快照 (請設為「無限制」，但 API 限制只勾選 Maps Static API)
-        // 如果您懶得申請第二把，可以填跟上面一樣，但該金鑰必須設為「無限制」才能傳圖片
+        // 2. 靜態金鑰 (STATIC_KEY)：用於 LINE 聊天室傳送地圖圖片
+        // 🔓 安全設定：請設為「無限制 (None)」，但在 API Restrictions 裡只勾選「Maps Static API」
+        // 🛠️ 啟用功能：Maps Static API
+        // (如果你暫時只有一把鑰匙且設為無限制，這裡填一樣的即可)
         const STATIC_KEY = 'AIzaSyDKmq2TQhIqPo090XCjUq0_oVwlM-kCZtc'; 
 
         const LIFF_ID = '2008907691-v0O7W8d3'; 
@@ -412,7 +416,7 @@
             const textMsg = `【地圖一鍵叫車】\n📞 電話：${phone}\n🟢 上車：${pickup}\n🔴 下車：${dropoff}\n💰 付款：${payment}\n🕒 時間：立即出發 (VIP)`;
             
             // 這裡使用 STATIC_KEY 來產生圖片網址
-            // 為了讓 LINE 伺服器能讀取，這把 STATIC_KEY 最好是「無網址限制」的
+            // 為了讓 LINE 伺服器能讀取，這把 STATIC_KEY 必須是「無網址限制」的
             const safeStaticKey = STATIC_KEY.includes('YOUR_') ? MAP_KEY : STATIC_KEY;
             const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${mapPickupLocation.lat},${mapPickupLocation.lng}&zoom=17&size=600x400&maptype=roadmap&markers=color:red%7Clabel:A%7C${mapPickupLocation.lat},${mapPickupLocation.lng}&key=${safeStaticKey}`;
 
