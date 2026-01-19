@@ -141,20 +141,30 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        const API_KEY = 'AIzaSyAlTcoOPEZeeMNwTGTap39VPsW85Ux8NHo'; 
+        // ================= 配置區 =================
+        // 1. MAP_KEY: 給網頁用 (可設網址限制: github.io)
+        const MAP_KEY = 'YOUR_MAP_KEY_HERE'; 
+        
+        // 2. STATIC_KEY: 給 LINE 卡片抓圖用 (必須設為 無限制 None, 但限制 API 為 Static Maps)
+        const STATIC_KEY = 'AIzaSyAlTcoOPEZeeMNwTGTap39VPsW85Ux8NHo'; 
+
         const LIFF_ID = '2008907691-lqyPtbIY'; 
+        // =========================================
 
         const PRESET_LOCATIONS = [{name:'常用地址 A',icon:'⭐',value:'FAV_ADDR_A'},{name:'常用地址 B',icon:'⭐',value:'FAV_ADDR_B'},{name:'花蓮前站',icon:'🚉'},{name:'花蓮後站',icon:'🚉'},{name:'慈濟醫院',icon:'🏥'},{name:'門諾醫院',icon:'🏥'},{name:'花蓮縣政府',icon:'🏢'},{name:'遠東百貨',icon:'🛍️'}];
         const PAYMENT_METHODS = [{id:'現金',label:'現金',icon:'fa-coins',color:'text-slate-600'},{id:'敬老卡',label:'敬老卡',sub:'(65歲+)',icon:'fa-person-cane',color:'text-orange-500'},{id:'愛心卡',label:'愛心卡',sub:'(身障)',icon:'fa-heart',color:'text-rose-500'},{id:'乘車券',label:'乘車券',icon:'fa-ticket',color:'text-blue-500'},{id:'TWRQ',label:'TWRQ',icon:'fa-qrcode',color:'text-purple-500'},{id:'LINE PAY',label:'LINE Pay',icon:'fa-brands fa-line',color:'text-green-500'},{id:'APPLE PAY',label:'Apple Pay',icon:'fa-brands fa-apple',color:'text-black'}];
 
-        let map, geocoder, cachedPosition = null;
+        let map, geocoder, cachedPosition = null, mapPickupLocation = { lat: 0, lng: 0 };
         const MAP_STYLES = [{ "featureType": "poi", "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] }, { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] }, { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] }, { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#e0e0e0" }] }];
 
         window.onload = function() {
             setTimeout(forceRemoveLoading, 5000);
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    (pos) => { cachedPosition = { lat: pos.coords.latitude, lng: pos.coords.longitude }; if (map) map.setCenter(cachedPosition); },
+                    (pos) => {
+                        cachedPosition = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        if (map) map.setCenter(cachedPosition);
+                    },
                     () => console.warn("GPS Pending"), { enableHighAccuracy: true, timeout: 5000 }
                 );
             }
@@ -163,9 +173,9 @@
             script.onload = () => { liff.init({ liffId: LIFF_ID }).catch(e => { alert('LIFF Init Error: ' + e); }); };
             document.head.appendChild(script);
 
-            if (API_KEY.includes('YOUR_')) { alert('請填入 API KEY'); forceRemoveLoading(); } else {
+            if (MAP_KEY.includes('YOUR_')) { alert('請填入 API KEY'); forceRemoveLoading(); } else {
                 const mapScript = document.createElement('script');
-                mapScript.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&language=zh-TW&callback=initMap`;
+                mapScript.src = `https://maps.googleapis.com/maps/api/js?key=${MAP_KEY}&language=zh-TW&callback=initMap`;
                 mapScript.async = true; mapScript.defer = true;
                 mapScript.onerror = () => { alert('無法載入地圖 API'); forceRemoveLoading(); };
                 document.head.appendChild(mapScript);
@@ -187,7 +197,13 @@
             map.addListener('dragstart', () => {
                 document.getElementById('btn-confirm-map').disabled = true; document.getElementById('btn-confirm-map').classList.add('opacity-50', 'scale-95'); document.getElementById('map-address-text').innerHTML = '<span class="text-gray-400">定位中...</span>'; document.getElementById('center-marker').classList.add('lifting'); if (navigator.vibrate) navigator.vibrate(10);
             });
-            map.addListener('idle', () => { document.getElementById('center-marker').classList.remove('lifting'); if (navigator.vibrate) navigator.vibrate(10); geocodePosition(map.getCenter()); });
+            map.addListener('idle', () => { 
+                const center = map.getCenter();
+                mapPickupLocation = { lat: center.lat(), lng: center.lng() };
+                document.getElementById('center-marker').classList.remove('lifting'); 
+                if (navigator.vibrate) navigator.vibrate(10); 
+                geocodePosition(mapPickupLocation); 
+            });
         };
 
         function geocodePosition(pos) {
@@ -248,7 +264,7 @@
             Swal.close();
         }
 
-        // --- 🚀 關鍵升級：發送 Flex Message (漂亮卡片) ---
+        // --- 🚀 關鍵：發送帶有 Hero Image 的 Flex Message ---
         async function submitOrder() {
             const phone = document.getElementById('phone').value;
             const pickup = document.getElementById('pickup').value;
@@ -264,26 +280,39 @@
             btn.disabled = true;
             btn.innerHTML = '<div class="loader mr-3 w-5 h-5 border-2 border-white border-t-transparent"></div> 處理中...';
 
-            // Flex Message JSON 結構
+            // 產生地圖快照 URL (使用 STATIC_KEY)
+            // 這裡我們產生一張 "600x400" 的長方形圖，適合卡片首圖
+            const center = `${mapPickupLocation.lat},${mapPickupLocation.lng}`;
+            // 為了避免編碼問題，這裡使用 encodeURIComponent 處理 markers
+            const markers = `color:red|label:A|${center}`;
+            // ⚠️ 關鍵：使用無限制的 STATIC_KEY
+            const safeStaticKey = STATIC_KEY.includes('YOUR_') ? MAP_KEY : STATIC_KEY;
+            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=17&size=600x400&maptype=roadmap&markers=${encodeURIComponent(markers)}&key=${safeStaticKey}`;
+
+            // Flex Message JSON (含 Hero Image)
             const flexMsg = {
                 type: "flex",
-                altText: "您有一筆新的叫車訂單",
+                altText: "您有一筆即時叫車訂單",
                 contents: {
                     type: "bubble",
-                    header: {
-                        type: "box",
-                        layout: "vertical",
-                        contents: [
-                            { type: "text", text: "🚕 即時叫車訂單", weight: "bold", size: "xl", color: "#FFFFFF" },
-                            { type: "text", text: "等待司機接單中...", size: "xs", color: "#E0F2F1", margin: "sm" }
-                        ],
-                        backgroundColor: "#059669",
-                        paddingAll: "20px"
+                    // 🌟 這裡就是您要的「卡片地圖」！
+                    hero: {
+                        type: "image",
+                        url: staticMapUrl,
+                        size: "full",
+                        aspectRatio: "20:13",
+                        aspectMode: "cover",
+                        action: {
+                            type: "uri",
+                            uri: `https://www.google.com/maps/search/?api=1&query=${center}`
+                        }
                     },
                     body: {
                         type: "box",
                         layout: "vertical",
                         contents: [
+                            { type: "text", text: "🚕 即時叫車訂單", weight: "bold", size: "xl", color: "#0f172a" },
+                            { type: "separator", margin: "md" },
                             // 電話
                             {
                                 type: "box", layout: "horizontal", margin: "md",
@@ -292,10 +321,9 @@
                                     { type: "text", text: phone, flex: 5, size: "md", weight: "bold", color: "#333333" }
                                 ]
                             },
-                            { type: "separator", margin: "lg" },
                             // 上車
                             {
-                                type: "box", layout: "horizontal", margin: "lg",
+                                type: "box", layout: "horizontal", margin: "md",
                                 contents: [
                                     { type: "text", text: "🟢", flex: 1, size: "sm" },
                                     { type: "text", text: pickup, flex: 5, size: "sm", wrap: true, color: "#555555" }
@@ -309,30 +337,21 @@
                                     { type: "text", text: dropoff, flex: 5, size: "sm", wrap: true, color: "#555555" }
                                 ]
                             },
-                            { type: "separator", margin: "lg" },
-                            // 付款方式
-                            {
-                                type: "box", layout: "horizontal", margin: "lg",
-                                contents: [
-                                    { type: "text", text: "💰", flex: 1, size: "md" },
-                                    { type: "text", text: payment, flex: 5, size: "md", weight: "bold", color: "#059669" }
-                                ]
-                            },
-                            // 時間 (VIP)
+                            { type: "separator", margin: "md" },
+                            // 付款
                             {
                                 type: "box", layout: "horizontal", margin: "md",
                                 contents: [
-                                    { type: "text", text: "🕒", flex: 1, size: "md" },
-                                    { type: "text", text: "立即出發 (VIP)", flex: 5, size: "md", color: "#333333" }
+                                    { type: "text", text: "💰", flex: 1, size: "md" },
+                                    { type: "text", text: payment, flex: 5, size: "md", weight: "bold", color: "#059669" }
                                 ]
                             }
                         ]
                     },
                     footer: {
-                        type: "box",
-                        layout: "vertical",
+                        type: "box", layout: "vertical",
                         contents: [
-                            { type: "text", text: "司機將盡快與您聯繫", size: "xs", color: "#aaaaaa", align: "center" }
+                            { type: "text", text: "立即出發 (VIP)", size: "xs", color: "#999999", align: "center", margin: "sm" }
                         ]
                     }
                 }
@@ -343,13 +362,24 @@
                     await liff.sendMessages([flexMsg]);
                     liff.closeWindow();
                 } else {
-                    console.log("Flex Message Preview:", flexMsg);
-                    alert("【訂單模擬成功】\n(Flex Message 已生成，請在 LINE 中測試效果)");
+                    console.log("Static Map URL:", staticMapUrl);
+                    console.log("Flex Message:", flexMsg);
+                    alert("【訂單模擬成功】\n(Flex Message 已生成，含地圖首圖)");
                     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-taxi mr-2"></i>確認叫車';
                 }
             } catch (e) {
-                alert("傳送失敗：" + e);
-                btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-taxi mr-2"></i>確認叫車';
+                // 如果圖片失敗，自動降級為純文字
+                console.warn("Flex Message 發送失敗，嘗試降級...", e);
+                try {
+                    await liff.sendMessages([{ 
+                        type: 'text', 
+                        text: `【即時叫車】\n📞 ${phone}\n🟢 ${pickup}\n🔴 ${dropoff}\n💰 ${payment}` 
+                    }]);
+                    liff.closeWindow();
+                } catch(err2) {
+                    alert("傳送失敗：" + err2);
+                    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-taxi mr-2"></i>確認叫車';
+                }
             }
         }
     </script>
