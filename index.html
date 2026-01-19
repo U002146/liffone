@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- 修改點 1: 網頁標題改為「地圖定位即時叫車」 -->
     <title>地圖定位即時叫車</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -100,7 +99,6 @@
                 <i class="fa-solid fa-chevron-left"></i> <span class="text-sm font-bold">重選上車</span>
             </button>
             <div class="text-center mt-2">
-                <!-- 修改點 2: 第二頁標題改為「即時叫車」 -->
                 <h1 class="text-2xl font-extrabold tracking-wide">即時叫車</h1>
             </div>
         </header>
@@ -166,7 +164,8 @@
     <script>
         // ================= 配置區 =================
         const API_KEY = 'AIzaSyAlTcoOPEZeeMNwTGTap39VPsW85Ux8NHo'; 
-        const LIFF_ID = '2008907691-v0O7W8d3'; 
+        // 修正：改回您正確的 LIFF ID (之前的版本可能誤植了)
+        const LIFF_ID = '2008907691-lqyPtbIY'; 
         // =========================================
 
         const PRESET_LOCATIONS = [
@@ -206,7 +205,12 @@
             }
             const script = document.createElement('script');
             script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
-            script.onload = () => { liff.init({ liffId: LIFF_ID }).catch(e => console.error(e)); };
+            // Debug: 加入錯誤捕捉，如果 ID 錯了會直接跳 Alert
+            script.onload = () => { 
+                liff.init({ liffId: LIFF_ID })
+                    .then(() => { console.log('LIFF OK'); })
+                    .catch(e => { alert('LIFF 初始化失敗：' + e + '\n請檢查 LIFF ID 是否正確'); }); 
+            };
             document.head.appendChild(script);
 
             if (API_KEY.includes('YOUR_')) {
