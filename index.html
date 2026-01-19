@@ -141,15 +141,8 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        // ================= 配置區 =================
-        // 1. MAP_KEY: 給網頁用 (可設網址限制: github.io)
-        const MAP_KEY = 'AIzaSyAlTcoOPEZeeMNwTGTap39VPsW85Ux8NHo'; 
-        
-        // 2. STATIC_KEY: 給 LINE 卡片抓圖用 (必須設為 無限制 None, 但限制 API 為 Static Maps)
-        const STATIC_KEY = 'AIzaSyAlTcoOPEZeeMNwTGTap39VPsW85Ux8NHo'; 
-
+        const API_KEY = 'AIzaSyAlTcoOPEZeeMNwTGTap39VPsW85Ux8NHo'; // 填入原本那把 KEY 即可
         const LIFF_ID = '2008907691-lqyPtbIY'; 
-        // =========================================
 
         const PRESET_LOCATIONS = [{name:'常用地址 A',icon:'⭐',value:'FAV_ADDR_A'},{name:'常用地址 B',icon:'⭐',value:'FAV_ADDR_B'},{name:'花蓮前站',icon:'🚉'},{name:'花蓮後站',icon:'🚉'},{name:'慈濟醫院',icon:'🏥'},{name:'門諾醫院',icon:'🏥'},{name:'花蓮縣政府',icon:'🏢'},{name:'遠東百貨',icon:'🛍️'}];
         const PAYMENT_METHODS = [{id:'現金',label:'現金',icon:'fa-coins',color:'text-slate-600'},{id:'敬老卡',label:'敬老卡',sub:'(65歲+)',icon:'fa-person-cane',color:'text-orange-500'},{id:'愛心卡',label:'愛心卡',sub:'(身障)',icon:'fa-heart',color:'text-rose-500'},{id:'乘車券',label:'乘車券',icon:'fa-ticket',color:'text-blue-500'},{id:'TWRQ',label:'TWRQ',icon:'fa-qrcode',color:'text-purple-500'},{id:'LINE PAY',label:'LINE Pay',icon:'fa-brands fa-line',color:'text-green-500'},{id:'APPLE PAY',label:'Apple Pay',icon:'fa-brands fa-apple',color:'text-black'}];
@@ -173,9 +166,9 @@
             script.onload = () => { liff.init({ liffId: LIFF_ID }).catch(e => { alert('LIFF Init Error: ' + e); }); };
             document.head.appendChild(script);
 
-            if (MAP_KEY.includes('YOUR_')) { alert('請填入 API KEY'); forceRemoveLoading(); } else {
+            if (API_KEY.includes('YOUR_')) { alert('請填入 API KEY'); forceRemoveLoading(); } else {
                 const mapScript = document.createElement('script');
-                mapScript.src = `https://maps.googleapis.com/maps/api/js?key=${MAP_KEY}&language=zh-TW&callback=initMap`;
+                mapScript.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&language=zh-TW&callback=initMap`;
                 mapScript.async = true; mapScript.defer = true;
                 mapScript.onerror = () => { alert('無法載入地圖 API'); forceRemoveLoading(); };
                 document.head.appendChild(mapScript);
@@ -264,7 +257,7 @@
             Swal.close();
         }
 
-        // --- 🚀 關鍵：發送帶有 Hero Image 的 Flex Message ---
+        // --- 🚀 V5.2 最終完美撥號版 ---
         async function submitOrder() {
             const phone = document.getElementById('phone').value;
             const pickup = document.getElementById('pickup').value;
@@ -280,53 +273,48 @@
             btn.disabled = true;
             btn.innerHTML = '<div class="loader mr-3 w-5 h-5 border-2 border-white border-t-transparent"></div> 處理中...';
 
-            // 產生地圖快照 URL (使用 STATIC_KEY)
-            // 這裡我們產生一張 "600x400" 的長方形圖，適合卡片首圖
-            const center = `${mapPickupLocation.lat},${mapPickupLocation.lng}`;
-            // 為了避免編碼問題，這裡使用 encodeURIComponent 處理 markers
-            const markers = `color:red|label:A|${center}`;
-            // ⚠️ 關鍵：使用無限制的 STATIC_KEY
-            const safeStaticKey = STATIC_KEY.includes('YOUR_') ? MAP_KEY : STATIC_KEY;
-            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=17&size=600x400&maptype=roadmap&markers=${encodeURIComponent(markers)}&key=${safeStaticKey}`;
+            // 📞 一鍵撥號與導航設定
+            // 注意：上車地點直接帶入經緯度，保證導航 100% 準確
+            const googleMapUrl = `https://www.google.com/maps/search/?api=1&query=${mapPickupLocation.lat},${mapPickupLocation.lng}`;
 
-            // Flex Message JSON (含 Hero Image)
+            // Flex Message JSON (無圖版，但功能最強)
             const flexMsg = {
                 type: "flex",
-                altText: "您有一筆即時叫車訂單",
+                altText: "🚕 您有一筆即時叫車訂單",
                 contents: {
                     type: "bubble",
-                    // 🌟 這裡就是您要的「卡片地圖」！
-                    hero: {
-                        type: "image",
-                        url: staticMapUrl,
-                        size: "full",
-                        aspectRatio: "20:13",
-                        aspectMode: "cover",
-                        action: {
-                            type: "uri",
-                            uri: `https://www.google.com/maps/search/?api=1&query=${center}`
-                        }
+                    header: {
+                        type: "box", layout: "vertical",
+                        contents: [
+                            { type: "text", text: "🚕 即時叫車訂單", weight: "bold", size: "xl", color: "#FFFFFF" },
+                            { type: "text", text: "乘客等待中", size: "xs", color: "#E0F2F1", margin: "sm" }
+                        ],
+                        backgroundColor: "#059669", paddingAll: "20px"
                     },
                     body: {
-                        type: "box",
-                        layout: "vertical",
+                        type: "box", layout: "vertical",
                         contents: [
-                            { type: "text", text: "🚕 即時叫車訂單", weight: "bold", size: "xl", color: "#0f172a" },
-                            { type: "separator", margin: "md" },
-                            // 電話
+                            // 電話 (點擊撥號)
                             {
                                 type: "box", layout: "horizontal", margin: "md",
                                 contents: [
                                     { type: "text", text: "📞", flex: 1, size: "md" },
-                                    { type: "text", text: phone, flex: 5, size: "md", weight: "bold", color: "#333333" }
+                                    { 
+                                        type: "text", text: phone, flex: 5, size: "md", weight: "bold", color: "#2563EB", decoration: "underline",
+                                        action: { type: "uri", label: "撥號", uri: `tel:${phone}` } 
+                                    }
                                 ]
                             },
-                            // 上車
+                            { type: "separator", margin: "lg" },
+                            // 上車 (點擊導航)
                             {
-                                type: "box", layout: "horizontal", margin: "md",
+                                type: "box", layout: "horizontal", margin: "lg",
                                 contents: [
                                     { type: "text", text: "🟢", flex: 1, size: "sm" },
-                                    { type: "text", text: pickup, flex: 5, size: "sm", wrap: true, color: "#555555" }
+                                    { 
+                                        type: "text", text: pickup, flex: 5, size: "sm", wrap: true, color: "#2563EB", decoration: "underline",
+                                        action: { type: "uri", label: "導航", uri: googleMapUrl }
+                                    }
                                 ]
                             },
                             // 下車
@@ -337,10 +325,10 @@
                                     { type: "text", text: dropoff, flex: 5, size: "sm", wrap: true, color: "#555555" }
                                 ]
                             },
-                            { type: "separator", margin: "md" },
+                            { type: "separator", margin: "lg" },
                             // 付款
                             {
-                                type: "box", layout: "horizontal", margin: "md",
+                                type: "box", layout: "horizontal", margin: "lg",
                                 contents: [
                                     { type: "text", text: "💰", flex: 1, size: "md" },
                                     { type: "text", text: payment, flex: 5, size: "md", weight: "bold", color: "#059669" }
@@ -351,7 +339,7 @@
                     footer: {
                         type: "box", layout: "vertical",
                         contents: [
-                            { type: "text", text: "立即出發 (VIP)", size: "xs", color: "#999999", align: "center", margin: "sm" }
+                            { type: "text", text: "司機將盡快與您聯繫", size: "xs", color: "#aaaaaa", align: "center" }
                         ]
                     }
                 }
@@ -362,27 +350,15 @@
                     await liff.sendMessages([flexMsg]);
                     liff.closeWindow();
                 } else {
-                    console.log("Static Map URL:", staticMapUrl);
                     console.log("Flex Message:", flexMsg);
-                    alert("【訂單模擬成功】\n(Flex Message 已生成，含地圖首圖)");
+                    alert("【訂單模擬成功】\n(Flex Message 已生成，含一鍵撥號功能)");
                     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-taxi mr-2"></i>確認叫車';
                 }
             } catch (e) {
-                // 如果圖片失敗，自動降級為純文字
-                console.warn("Flex Message 發送失敗，嘗試降級...", e);
-                try {
-                    await liff.sendMessages([{ 
-                        type: 'text', 
-                        text: `【即時叫車】\n📞 ${phone}\n🟢 ${pickup}\n🔴 ${dropoff}\n💰 ${payment}` 
-                    }]);
-                    liff.closeWindow();
-                } catch(err2) {
-                    alert("傳送失敗：" + err2);
-                    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-taxi mr-2"></i>確認叫車';
-                }
+                alert("傳送失敗：" + e);
+                btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-taxi mr-2"></i>確認叫車';
             }
         }
     </script>
 </body>
 </html>
-
