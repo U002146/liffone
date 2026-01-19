@@ -109,7 +109,7 @@
                 <i class="fa-solid fa-chevron-left"></i> <span class="text-sm font-bold">重選上車</span>
             </button>
             <div class="text-center mt-1">
-                <h1 class="text-2xl font-extrabold tracking-wide">地圖定位即時叫車</h1>
+                <h1 class="text-2xl font-extrabold tracking-wide">即時叫車</h1>
             </div>
         </header>
 
@@ -174,7 +174,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // ⚠️ 設定區：請填入 API KEY
-        const GOOGLE_MAPS_API_KEY = 'AIzaSyAKIajmzzSO7DHAhvLRMAh3iV-VVUA7cwE'; 
+        const GOOGLE_MAPS_API_KEY = 'AIzaSyAlTcoOPEZeeMNwTGTap39VPsW85Ux8NHo'; 
         const LIFF_ID = '2008907691-v0O7W8d3'; 
 
         // 常用地點資料
@@ -462,7 +462,7 @@
             btn.innerHTML = '<div class="loader mr-2 w-5 h-5 border-2"></div> 處理中...';
 
             // 1. 文字訊息
-            const textMsg = `【地圖定位即時叫車】\n📞 電話：${phone}\n🟢 上車：${pickup}\n🔴 下車：${dropoff}\n💰 付款：${payment}\n🕒 時間：立即出發 (VIP)`;
+            const textMsg = `【即時叫車】\n📞 電話：${phone}\n🟢 上車：${pickup}\n🔴 下車：${dropoff}\n💰 付款：${payment}\n🕒 時間：立即出發 (VIP)`;
             
             // 2. 靜態地圖網址
             const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${mapPickupLocation.lat},${mapPickupLocation.lng}&zoom=17&size=600x400&maptype=roadmap&markers=color:red%7Clabel:A%7C${mapPickupLocation.lat},${mapPickupLocation.lng}&key=${GOOGLE_MAPS_API_KEY}`;
@@ -496,3 +496,4 @@
     </script>
 </body>
 </html>
+
