@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>預約叫車服務</title>
+    <title>地圖定位一鍵叫車</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -44,26 +44,15 @@
         }
         #form-layer.active { display: flex; }
 
-        /* Google Autocomplete 修飾 */
-        .pac-container {
-            border-radius: 12px; margin-top: 5px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: none; font-family: 'Noto Sans TC', sans-serif;
-            z-index: 10000 !important;
-        }
-        .pac-item { padding: 12px; font-size: 16px; }
-        .pac-icon { display: none; }
-
-        /* 付款按鈕樣式 */
-        .payment-btn.active {
-            border-color: #10B981; background-color: #ECFDF5; color: #059669;
-            box-shadow: 0 0 0 2px #10B981 inset;
-        }
-
         /* Loading */
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #10B981; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* 常用地點列表樣式 */
+        /* 彈出視窗列表樣式 */
         .location-grid { max-height: 50vh; overflow-y: auto; padding: 4px; }
+        
+        /* SweetAlert 自定義 */
+        .swal2-popup { border-radius: 24px !important; }
     </style>
 </head>
 <body>
@@ -112,36 +101,24 @@
     </div>
 
 
-    <!-- ========= STEP 2: 預約表單 (整合版) ========= -->
+    <!-- ========= STEP 2: 預約表單 (完工版) ========= -->
     <div id="form-layer">
         <header class="bg-emerald-600 text-white p-6 pb-8 rounded-b-[2.5rem] shadow-lg z-10 relative shrink-0">
             <button onclick="backToMap()" class="absolute top-6 left-4 text-white/90 hover:text-white z-50 flex items-center space-x-1">
                 <i class="fa-solid fa-chevron-left"></i> <span class="text-sm font-bold">重選上車</span>
             </button>
-            <div class="text-center mt-2">
-                <h1 class="text-2xl font-extrabold tracking-wide">🚕 預約確認</h1>
-                <p id="user-display" class="text-emerald-100 text-sm mt-1 font-medium">載入使用者...</p>
+            <div class="text-center mt-1">
+                <h1 class="text-2xl font-extrabold tracking-wide">地圖定位一鍵叫車</h1>
             </div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 -mt-6 relative z-20 pb-32">
-            <form id="booking-form" class="bg-white rounded-3xl shadow-md border border-gray-100 p-5 space-y-5">
+            <form id="booking-form" class="bg-white rounded-3xl shadow-md border border-gray-100 p-5 space-y-6">
                 
                 <!-- 聯絡電話 -->
                 <div>
                     <label class="block font-bold text-gray-700 mb-2 text-base">📞 聯絡電話</label>
                     <input type="tel" id="phone" required placeholder="09xx-xxx-xxx" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
-                </div>
-
-                <!-- 時間 (預設立即) -->
-                <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-center space-x-3">
-                    <div class="bg-blue-100 w-10 h-10 rounded-full flex items-center justify-center text-blue-600 shrink-0">
-                        <i class="fa-solid fa-clock"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs text-blue-600 font-bold">預約時間</p>
-                        <p class="text-base font-bold text-blue-900">立即出發 (VIP)</p>
-                    </div>
                 </div>
 
                 <!-- 地點區塊 -->
@@ -153,28 +130,31 @@
                         <input type="text" id="pickup" readonly class="w-full text-base font-bold text-gray-500 bg-transparent border-none p-0 outline-none truncate" value="等待定位...">
                     </div>
 
-                    <!-- 下車 (Autocomplete + 常用清單) -->
+                    <!-- 下車 (移除 Google Autocomplete，僅保留手動 + 常用) -->
                     <div>
                         <div class="flex justify-between items-center mb-2">
                             <label class="block text-sm font-bold text-red-600">🔴 下車地點</label>
-                            <!-- 移植您的常用地點按鈕 -->
-                            <button type="button" onclick="openPresetLocations('dropoff')" class="flex items-center space-x-1 px-3 py-1 bg-red-50 text-red-600 text-xs font-bold rounded-full border border-red-100 active:scale-95 transition-transform">
+                            <button type="button" onclick="openPresetLocations()" class="flex items-center space-x-1 px-3 py-1 bg-red-50 text-red-600 text-xs font-bold rounded-full border border-red-100 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-star"></i>
                                 <span>常用地點</span>
                             </button>
                         </div>
-                        <input type="text" id="dropoff" required placeholder="請輸入或搜尋目的地..." class="w-full p-3 border border-gray-200 rounded-xl text-lg font-bold shadow-sm focus:ring-2 focus:ring-red-500 outline-none">
+                        <input type="text" id="dropoff" required placeholder="請輸入目的地..." class="w-full p-3 border border-gray-200 rounded-xl text-lg font-bold shadow-sm focus:ring-2 focus:ring-red-500 outline-none">
                     </div>
                 </div>
 
                 <div class="w-full h-[1px] bg-gray-100"></div>
 
-                <!-- 付款方式 (AgeTech 優化：大按鈕) -->
+                <!-- 付款方式 (改為彈窗選擇) -->
                 <div>
-                    <label class="block font-bold text-gray-700 mb-3 text-base">💰 付款方式</label>
-                    <div class="grid grid-cols-2 gap-3" id="payment-options">
-                        <!-- JS 動態生成 -->
+                    <label class="block font-bold text-gray-700 mb-2 text-base">💰 付款方式</label>
+                    <div onclick="openPaymentPicker()" class="w-full p-3 border border-gray-200 rounded-xl text-lg font-bold shadow-sm flex items-center justify-between active:bg-gray-50 cursor-pointer">
+                        <span id="payment-display" class="flex items-center">
+                            <i class="fa-solid fa-coins text-gray-500 mr-2"></i> 現金
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-sm"></i>
                     </div>
+                    <input type="hidden" id="payment-value" value="現金">
                 </div>
 
             </form>
@@ -196,7 +176,7 @@
         const GOOGLE_MAPS_API_KEY = 'AIzaSyAKIajmzzSO7DHAhvLRMAh3iV-VVUA7cwE'; 
         const LIFF_ID = '2008907691-v0O7W8d3'; 
 
-        // 常用地點資料 (移植自您的代碼)
+        // 常用地點資料
         const PRESET_LOCATIONS = [
             { name: '常用地址 A', icon: '⭐', value: 'FAV_ADDR_A' },
             { name: '常用地址 B', icon: '⭐', value: 'FAV_ADDR_B' },
@@ -219,17 +199,16 @@
             { id: 'APPLE PAY', label: 'Apple Pay', icon: 'fa-brands fa-apple', color: 'text-black' }
         ];
 
-        let map, geocoder, autocomplete;
+        let map, geocoder;
         let cachedPosition = null;
-        let selectedPayment = '現金';
+        let mapPickupLocation = { lat: 0, lng: 0 }; // 儲存座標供截圖使用
 
         // --- 初始化流程 ---
 
         window.onload = function() {
-            // 1. 安全機制：5秒後強制移除 Loading，避免卡死
             setTimeout(forceRemoveLoading, 5000);
 
-            // 2. 預先抓取 GPS
+            // 預先抓取 GPS
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
@@ -241,36 +220,28 @@
                 );
             }
 
-            // 3. 載入 UI 元件
-            renderPaymentOptions();
-            
-            // 4. 初始化 LIFF
+            // LIFF
             const script = document.createElement('script');
             script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
             script.onload = () => {
-                liff.init({ liffId: LIFF_ID }).then(() => {
-                    if (liff.isLoggedIn()) {
-                        liff.getProfile().then(p => {
-                            document.getElementById('user-display').innerText = `Hi, ${p.displayName}`;
-                        });
-                    } else { liff.login(); }
-                }).catch(e => console.error(e));
+                liff.init({ liffId: LIFF_ID }).catch(e => console.error(e));
             };
             document.head.appendChild(script);
 
-            // 5. 載入 Google Maps (檢查 Key)
+            // Google Maps
             if (GOOGLE_MAPS_API_KEY.includes('YOUR_')) {
                 alert('請在程式碼中填入正確的 API KEY');
                 forceRemoveLoading();
             } else {
                 const mapScript = document.createElement('script');
-                mapScript.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&language=zh-TW&callback=initMap`;
+                // 注意：這裡移除了 libraries=places，因為您說不需要預測功能了，節省效能
+                mapScript.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&language=zh-TW&callback=initMap`;
                 mapScript.async = true; mapScript.defer = true;
-                mapScript.onerror = () => { alert('無法載入地圖 API，請檢查網路或金鑰'); forceRemoveLoading(); };
+                mapScript.onerror = () => { alert('無法載入地圖 API'); forceRemoveLoading(); };
                 document.head.appendChild(mapScript);
             }
 
-            // 6. 讀取電話暫存
+            // 讀取電話
             const savedPhone = localStorage.getItem('taxi_user_phone');
             if(savedPhone) document.getElementById('phone').value = savedPhone;
         };
@@ -281,7 +252,7 @@
             setTimeout(() => { if(overlay) overlay.style.display = 'none'; }, 500);
         }
 
-        // --- 地圖邏輯 (Step 1) ---
+        // --- 地圖邏輯 ---
 
         window.initMap = function() {
             geocoder = new google.maps.Geocoder();
@@ -294,13 +265,10 @@
                 clickableIcons: false
             });
 
-            // 初始化下車地點自動完成
-            initAutocomplete();
-
             if (!cachedPosition) panToCurrentLocation();
             else {
                 geocodePosition(startPos);
-                forceRemoveLoading(); // 地圖好了就立刻關閉 Loading
+                forceRemoveLoading();
             }
 
             map.addListener('dragstart', () => {
@@ -310,33 +278,20 @@
             });
             
             map.addListener('idle', () => {
-                geocodePosition(map.getCenter());
+                const center = map.getCenter();
+                mapPickupLocation = { lat: center.lat(), lng: center.lng() }; // 更新全域座標
+                geocodePosition(mapPickupLocation);
             });
         };
 
-        function initAutocomplete() {
-            const input = document.getElementById("dropoff");
-            autocomplete = new google.maps.places.Autocomplete(input, {
-                componentRestrictions: { country: "tw" },
-                fields: ["name", "formatted_address"]
-            });
-            autocomplete.addListener("place_changed", () => {
-                const place = autocomplete.getPlace();
-                if(place.name) input.value = place.name;
-            });
-        }
-
         function geocodePosition(pos) {
-            const lat = typeof pos.lat === 'function' ? pos.lat() : pos.lat;
-            const lng = typeof pos.lng === 'function' ? pos.lng() : pos.lng;
-            geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+            geocoder.geocode({ location: pos }, (results, status) => {
                 const btn = document.getElementById('btn-confirm-map');
                 if (status === "OK" && results[0]) {
                     let addr = results[0].formatted_address;
-                    // 地址簡化：移除郵遞區號與台灣
                     addr = addr.replace(/^\d+\s*/, '').replace(/台灣/, '').replace(/.*?區/, (m) => m + ' ');
                     document.getElementById('map-address-text').innerText = addr;
-                    document.getElementById('pickup').value = addr; // 同步填入表單
+                    document.getElementById('pickup').value = addr;
                     btn.disabled = false;
                     btn.classList.remove('opacity-50');
                 }
@@ -346,15 +301,11 @@
         function panToCurrentLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        map.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-                    },
+                    (pos) => { map.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
                     (e) => alert("無法取得位置")
                 );
             }
         }
-
-        // --- 流程切換 ---
 
         function confirmMapLocation() {
             document.getElementById('map-layer').classList.add('slide-out');
@@ -366,7 +317,7 @@
             document.getElementById('form-layer').classList.remove('active');
         }
 
-        // --- 下車地點 (常用清單邏輯 - 移植版) ---
+        // --- 下車地點 (彈出視窗) ---
 
         function openPresetLocations() {
             let html = '<div class="grid grid-cols-2 gap-3 mt-2 location-grid">';
@@ -384,104 +335,103 @@
             html += '</div>';
 
             Swal.fire({
-                title: '快速選擇下車地點',
-                html: html,
-                showConfirmButton: false,
-                showCloseButton: true,
-                customClass: { popup: 'rounded-2xl' }
+                title: '選擇下車地點', html: html, showConfirmButton: false, showCloseButton: true
             });
         }
 
         window.selectPreset = function(val) {
             const input = document.getElementById('dropoff');
-            
-            // 處理常用地址 A/B 的儲存邏輯
-            if (val === 'FAV_ADDR_A' || val === 'FAV_ADDR_B') {
+            if (val.includes('FAV')) {
                 const key = val === 'FAV_ADDR_A' ? 'taxi_fav_a' : 'taxi_fav_b';
                 const label = val === 'FAV_ADDR_A' ? '常用地址 A' : '常用地址 B';
                 const saved = localStorage.getItem(key);
-
                 if (saved) {
-                    Swal.fire({
-                        title: `使用${label}？`, text: saved, icon: 'question',
-                        showDenyButton: true, confirmButtonText: '是', denyButtonText: '修改',
-                        confirmButtonColor: '#10b981'
-                    }).then(r => {
-                        if(r.isConfirmed) { input.value = saved; Swal.close(); }
-                        else if(r.isDenied) promptSave(key, label, input);
-                    });
+                    input.value = saved; Swal.close();
                 } else {
-                    promptSave(key, label, input);
+                    Swal.fire({
+                        title: `設定${label}`, input: 'text', showCancelButton: true, confirmButtonText: '儲存', confirmButtonColor: '#fbbf24'
+                    }).then(r => {
+                        if(r.isConfirmed && r.value) { localStorage.setItem(key, r.value); input.value = r.value; Swal.close(); }
+                    });
                 }
             } else {
-                input.value = val;
-                Swal.close();
+                input.value = val; Swal.close();
             }
         };
 
-        function promptSave(key, label, input) {
+        // --- 付款方式 (彈出視窗) ---
+
+        function openPaymentPicker() {
+            let html = '<div class="grid grid-cols-2 gap-3 mt-2 location-grid">';
+            const currentVal = document.getElementById('payment-value').value;
+            
+            PAYMENT_METHODS.forEach(m => {
+                let activeClass = m.label === currentVal ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500' : 'bg-gray-50 border-gray-200';
+                html += `
+                    <button onclick="selectPaymentMethod('${m.label}', '${m.icon}')" 
+                        class="flex flex-col items-center justify-center p-4 border rounded-xl transition-all active:scale-95 ${activeClass}">
+                        <i class="fa-solid ${m.icon} ${m.color} text-2xl mb-2"></i>
+                        <span class="text-sm font-bold text-gray-700">${m.label}</span>
+                        ${m.sub ? `<span class="text-[10px] text-gray-400">${m.sub}</span>` : ''}
+                    </button>`;
+            });
+            html += '</div>';
+
             Swal.fire({
-                title: `設定${label}`, input: 'text', inputPlaceholder: '輸入地址...',
-                showCancelButton: true, confirmButtonText: '儲存', confirmButtonColor: '#fbbf24'
-            }).then(r => {
-                if(r.isConfirmed && r.value) {
-                    localStorage.setItem(key, r.value);
-                    input.value = r.value;
-                    Swal.close();
-                }
+                title: '選擇付款方式', html: html, showConfirmButton: false, showCloseButton: true
             });
         }
 
-        // --- 付款方式 (AgeTech Grid) ---
-
-        function renderPaymentOptions() {
-            const container = document.getElementById('payment-options');
-            container.innerHTML = PAYMENT_METHODS.map(m => `
-                <button type="button" onclick="selectPay('${m.id}')" 
-                    class="payment-btn ${m.id === selectedPayment ? 'active' : ''} border border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center bg-white transition-all hover:bg-gray-50 relative h-20">
-                    <i class="fa-solid ${m.icon} ${m.color} text-xl mb-1"></i>
-                    <span class="text-sm font-bold text-gray-800">${m.label}</span>
-                    ${m.sub ? `<span class="text-[10px] text-gray-400">${m.sub}</span>` : ''}
-                    ${m.id === selectedPayment ? '<div class="absolute top-1 right-1 text-emerald-500 text-xs"><i class="fa-solid fa-circle-check"></i></div>' : ''}
-                </button>
-            `).join('');
+        window.selectPaymentMethod = function(label, iconClass) {
+            document.getElementById('payment-value').value = label;
+            document.getElementById('payment-display').innerHTML = `<i class="fa-solid ${iconClass} text-gray-600 mr-2"></i> ${label}`;
+            Swal.close();
         }
 
-        window.selectPay = function(id) {
-            selectedPayment = id;
-            renderPaymentOptions();
-        };
-
-        // --- 送出訂單 ---
+        // --- 送出訂單 (含地圖快照) ---
 
         async function submitOrder() {
             const phone = document.getElementById('phone').value;
             const pickup = document.getElementById('pickup').value;
             const dropoff = document.getElementById('dropoff').value;
+            const payment = document.getElementById('payment-value').value;
 
             if(!phone || phone.length < 8) return alert('請輸入電話');
             if(!dropoff) return alert('請輸入下車地點');
 
             localStorage.setItem('taxi_user_phone', phone);
             
-            // 鎖定按鈕
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
             btn.innerHTML = '<div class="loader mr-2 w-5 h-5 border-2"></div> 處理中...';
 
-            const msg = `🗓️ 預約叫車確認單\n👤 乘客：VIP\n📞 電話：${phone}\n📅 時間：立即出發\n💰 付款：${selectedPayment}\n🟢 上車：${pickup}\n🔴 下車：${dropoff}`;
+            // 1. 文字訊息
+            const textMsg = `【地圖一鍵叫車】\n📞 電話：${phone}\n🟢 上車：${pickup}\n🔴 下車：${dropoff}\n💰 付款：${payment}\n🕒 時間：立即出發 (VIP)`;
+            
+            // 2. 靜態地圖網址 (需要啟用 Maps Static API)
+            // 格式: center=lat,lng & zoom=17 & size=400x400 & markers=...
+            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${mapPickupLocation.lat},${mapPickupLocation.lng}&zoom=17&size=600x400&maptype=roadmap&markers=color:red%7Clabel:A%7C${mapPickupLocation.lat},${mapPickupLocation.lng}&key=${GOOGLE_MAPS_API_KEY}`;
 
             try {
                 if (liff.isInClient()) {
-                    await liff.sendMessages([{ type: 'text', text: msg }]);
+                    // 傳送 文字 + 圖片
+                    await liff.sendMessages([
+                        { type: 'text', text: textMsg },
+                        { 
+                            type: 'image', 
+                            originalContentUrl: staticMapUrl, 
+                            previewImageUrl: staticMapUrl 
+                        }
+                    ]);
                     liff.closeWindow();
                 } else {
-                    alert("測試模式訂單：\n" + msg);
+                    alert("【測試訂單】\n" + textMsg + "\n\n(LINE環境下將傳送地圖圖片)");
+                    console.log("Static Map URL:", staticMapUrl);
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fa-solid fa-taxi mr-2"></i>確認叫車';
                 }
             } catch (e) {
-                alert("傳送失敗：" + e);
+                alert("傳送失敗 (請確認已啟用 Maps Static API)：" + e);
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-taxi mr-2"></i>確認叫車';
             }
