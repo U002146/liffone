@@ -369,9 +369,9 @@
                             {
                                 type: "box", layout: "horizontal", margin: "md",
                                 contents: [
-                                    { type: "text", text: "🟢 上車", flex: 2, color: "#888888", size: "sm" },
+                                    { type: "text", text: "🟢 上車", flex: 2, color: "#888888", size: "md" },
                                     { 
-                                        type: "text", text: pickup, flex: 5, color: "#111111", size: "sm", wrap: true, 
+                                        type: "text", text: pickup, flex: 5, color: "#111111", size: "md", wrap: true, 
                                         action: { type: "uri", label: "導航", uri: googleMapUrl } 
                                     }
                                 ]
@@ -381,9 +381,9 @@
                             {
                                 type: "box", layout: "horizontal", margin: "lg",
                                 contents: [
-                                    { type: "text", text: "🔴 下車", flex: 2, color: "#888888", size: "sm" },
+                                    { type: "text", text: "🔴 下車", flex: 2, color: "#888888", size: "md" },
                                     { 
-                                        type: "text", text: dropoff, flex: 5, color: "#111111", size: "sm", wrap: true,
+                                        type: "text", text: dropoff, flex: 5, color: "#111111", size: "md", wrap: true,
                                         action: { type: "uri", label: "導航", uri: dropoffMapUrl }
                                     }
                                 ]
@@ -393,9 +393,9 @@
                             {
                                 type: "box", layout: "horizontal", margin: "lg",
                                 contents: [
-                                    { type: "text", text: "📞 電話", flex: 2, color: "#888888", size: "sm" },
+                                    { type: "text", text: "📞 電話", flex: 2, color: "#888888", size: "md" },
                                     { 
-                                        type: "text", text: phone, flex: 5, color: "#111111", size: "sm", weight: "bold", 
+                                        type: "text", text: phone, flex: 5, color: "#111111", size: "md", weight: "bold", 
                                         action: { type: "uri", label: "撥號", uri: `tel:${phone}` } 
                                     }
                                 ]
@@ -422,4 +422,5 @@
     </script>
 </body>
 </html>
+
 
